@@ -53,14 +53,19 @@ with st.form("form_pendaftaran", clear_on_submit=False):
 
     jadwal_a = []
     if "Program MATH DROP-IN" in programs:
-        jadwal_a = st.selectbox(
-            "Pilih jadwal untuk Program A:",
+        jadwal_a = st.multiselect(
+            label="Pilih jadwal untuk Program MATH DROP-IN",
+            options=
             ["Day 1 (Senin, 18.00 - 20.00)",
              "Day 2 (Selasa, 18.00 - 20.00)",
              "Day 3 (Rabu, 18.00 - 20.00)",
              "Day 4 (Kamis, 18.00 - 20.00)",
-             "Day 5 (Jumat, 18.00 - 20.00)"]
+             "Day 5 (Jumat, 18.00 - 20.00)"],
+             placeholder="Pilih minimal satu jadwal"
         )
+        #Tampilan hasil pilihan
+        st.write("Jadwal yang dipilih:", jadwal_a)
+
     else:
         st.info("ℹ️ Karena tidak memilih Program MATH DROP-IN, lewati bagian ini.")
 
