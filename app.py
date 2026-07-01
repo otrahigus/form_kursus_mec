@@ -45,23 +45,24 @@ with st.form("form_pendaftaran", clear_on_submit=False):
     st.header("🎯 Pilih Program Kursus")
     programs = st.multiselect(
         "Program apa saja yang ingin diikuti? (boleh lebih dari satu) *",
-        ["Program A - Komputer", "Program B - Menggambar", "Program C - Ngaji"]
+        ["Program MATH DROP-IN", "Program ENGLISH FOR KIDS", "Program ENGLISH FOR TEENS", "Program PREMIUM MATH"]
     )
 
     # === BAGIAN 4: JADWAL KHUSUS PROGRAM A (Muncul bersyarat) ===
-    st.header("📅 Jadwal Program A (Komputer)")
-    jadwal_a = None
-    if "Program A - Komputer" in programs:
+    st.header("📅 Jadwal Program MATH DROP-IN")
+
+    jadwal_a = []
+    if "Program MATH DROP-IN" in programs:
         jadwal_a = st.selectbox(
             "Pilih jadwal untuk Program A:",
-            ["Sesi 1 (Senin & Rabu, 08.00 - 09.30)",
-             "Sesi 2 (Senin & Rabu, 10.00 - 11.30)",
-             "Sesi 3 (Selasa & Kamis, 08.00 - 09.30)",
-             "Sesi 4 (Selasa & Kamis, 10.00 - 11.30)",
-             "Sesi 5 (Sabtu, 09.00 - 11.00)"]
+            ["Day 1 (Senin, 18.00 - 20.00)",
+             "Day 2 (Selasa, 18.00 - 20.00)",
+             "Day 3 (Rabu, 18.00 - 20.00)",
+             "Day 4 (Kamis, 18.00 - 20.00)",
+             "Day 5 (Jumat, 18.00 - 20.00)"]
         )
     else:
-        st.info("ℹ️ Karena tidak memilih Program A, lewati bagian ini.")
+        st.info("ℹ️ Karena tidak memilih Program MATH DROP-IN, lewati bagian ini.")
 
     # === TOMBOL SUBMIT ===
     submitted = st.form_submit_button("✅ Daftar Sekarang")
@@ -71,6 +72,9 @@ with st.form("form_pendaftaran", clear_on_submit=False):
         # Validasi wajib
         if not nama or not orang_tua or not wa or not alamat or not programs:
             st.error("❌ Mohon lengkapi semua data yang bertanda * (bintang).")
+        # Validasi khusus program MATH DROP-IN: Wajib pilih minimal 1 jadwal
+        elif "Program MATH DROP-IN" in programs and len(jadwal_a) == 0:
+            st.error("❌ Anda memilih program MATH DROP-IN, tapi belum memilih jadwalnya. Pilih minimal 1 jadwal.")
         else:
             # Siapkan data
             data_pendaftar = {
