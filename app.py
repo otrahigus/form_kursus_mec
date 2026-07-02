@@ -14,22 +14,22 @@ st.set_page_config(
 )
 
 # ---------- CSS KUSTOM (Background Gradasi & Desain) ----------
-st.image("https://drive.google.com/file/d/1HB7JWLcFGoRanNczUo-zMg9kzMvp22ah/view?usp=sharing", use_column_width=True)
 st.markdown("""
 <style>
-    /* Background gradasi biru ke hijau */
+    /* Background gradasi lembut */
     .stApp {
-        background: linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 100%);
+        background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
     }
     
-    /* Kartu putih untuk setiap bagian */
+    /* Kartu putih dengan bayangan */
     .card {
-        background-color: white;
+        background-color: #ffffff;
         padding: 25px 20px;
         border-radius: 20px;
         box-shadow: 0 8px 25px rgba(0,0,0,0.08);
         margin-bottom: 25px;
         border: 1px solid rgba(255,255,255,0.5);
+        color: #1a237e; /* Warna teks gelap */
     }
     
     /* Judul utama */
@@ -37,14 +37,14 @@ st.markdown("""
         text-align: center;
         font-size: 2.2rem;
         font-weight: 700;
-        color: #1a237e;
+        color: #ffffff; /*putih*/
         margin-bottom: 5px;
     }
     
     .sub-title {
         text-align: center;
         font-size: 1rem;
-        color: #546e7a;
+        color: #e3f2fd; /* Biru sangat terang */
         margin-bottom: 20px;
     }
     
