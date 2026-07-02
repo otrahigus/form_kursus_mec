@@ -13,6 +13,11 @@ SHEET_URL = "https://api.sheetbest.com/sheets/72f98a03-5ba2-434d-b486-b663202531
 # Kosongkan / biarkan file tidak ada jika belum punya logo -> otomatis pakai emoji 🏫
 LOGO_PATH = "logo.png"
 
+# Taruh file poster/banner di folder yang sama, lalu ganti nama filenya di sini.
+# Jika file ini ada, poster akan menggantikan kotak banner biru gradient.
+# Jika tidak ada, banner biru default tetap dipakai.
+POSTER_PATH = "poster.png"
+
 def get_logo_base64(path):
     """Baca file gambar & ubah ke base64 agar bisa ditempel di dalam HTML/CSS."""
     if path and os.path.exists(path):
@@ -24,6 +29,7 @@ def get_logo_base64(path):
     return None
 
 logo_data_uri = get_logo_base64(LOGO_PATH)
+poster_data_uri = get_logo_base64(POSTER_PATH)
 
 st.set_page_config(
     page_title="Pendaftaran Kursus",
@@ -91,6 +97,16 @@ st.markdown("""
         border-radius: 16px;
         padding: 8px;
         box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    }
+
+    /* ---------- Poster banner (menggantikan hero jika ada) ---------- */
+    .poster-banner {
+        width: 100%;
+        border-radius: 22px;
+        display: block;
+        margin-bottom: 22px;
+        box-shadow: 0 10px 30px rgba(11,61,145,0.3);
+        object-fit: cover;
     }
     .hero h1 {
         color: #ffffff !important;
@@ -267,18 +283,24 @@ st.markdown("""
 # =========================================================
 # HEADER
 # =========================================================
-if logo_data_uri:
-    header_icon_html = f'<img src="{logo_data_uri}" class="logo" alt="logo">'
+if poster_data_uri:
+    # Poster menggantikan banner biru sepenuhnya
+    st.markdown(f"""
+    <img src="{poster_data_uri}" class="poster-banner" alt="poster">
+    """, unsafe_allow_html=True)
 else:
-    header_icon_html = '<span class="emoji">🏫</span>'
+    if logo_data_uri:
+        header_icon_html = f'<img src="{logo_data_uri}" class="logo" alt="logo">'
+    else:
+        header_icon_html = '<span class="emoji">🏫</span>'
 
-st.markdown(f"""
-<div class="hero">
-    {header_icon_html}
-    <h1>Pendaftaran Kursus</h1>
-    <p>📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="hero">
+        {header_icon_html}
+        <h1>Pendaftaran Kursus</h1>
+        <p>📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # =========================================================
 # BAGIAN 1: DATA DIRI
