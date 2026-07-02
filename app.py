@@ -331,12 +331,19 @@ with card():
         sekolah_kelas = st.selectbox(
             "Sekolah & Kelas *",
             ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA", "UMUM"]
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3"]
         )
     with col4:
         pekerjaan_ortu = st.selectbox(
             "Pekerjaan Orang Tua",
             ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
+        )
+
+    pekerjaan_ortu_lainnya = ""
+    if pekerjaan_ortu == "Lainnya":
+        pekerjaan_ortu_lainnya = st.text_input(
+            "Sebutkan pekerjaan orang tua *",
+            placeholder="Contoh: Tukang Ojek, Wiraswasta, dll."
         )
 
 # =========================================================
@@ -418,11 +425,15 @@ if submitted:
         st.error("❌ Mohon lengkapi semua data yang bertanda *.")
     elif sekolah_kelas == "Pilih...":
         st.error("❌ Pilih Sekolah & Kelas terlebih dahulu.")
+    elif pekerjaan_ortu == "Lainnya" and not pekerjaan_ortu_lainnya.strip():
+        st.error("❌ Mohon isi kolom 'Sebutkan pekerjaan orang tua'.")
     elif len(programs) == 0:
         st.error("❌ Pilih minimal 1 program kursus.")
     elif cek_program_a and len(jadwal_a) == 0:
         st.error("❌ Anda memilih Program MATH DROP-IN, tapi belum memilih jadwal. Centang minimal 1.")
     else:
+        pekerjaan_final = pekerjaan_ortu_lainnya.strip() if pekerjaan_ortu == "Lainnya" else pekerjaan_ortu
+
         data_pendaftar = {
             "tanggal_daftar": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "nama_lengkap": nama,
@@ -431,7 +442,7 @@ if submitted:
             "no_wa": wa,
             "alamat": alamat,
             "sekolah_kelas": sekolah_kelas,
-            "pekerjaan_ortu": pekerjaan_ortu,
+            "pekerjaan_ortu": pekerjaan_final,
             "program_dipilih": ", ".join(programs),
             "jadwal_a": ", ".join(jadwal_a) if jadwal_a else "-"
         }
