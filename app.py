@@ -8,19 +8,19 @@ SHEET_URL = "https://api.sheetbest.com/sheets/72f98a03-5ba2-434d-b486-b663202531
 
 # ---------- PENGATURAN HALAMAN ----------
 st.set_page_config(
-    page_title="Form Pendaftaran Kursus", 
+    page_title="Form Pendaftaran Kursus",
     page_icon="📝",
     layout="centered"
 )
 
-# ---------- CSS KUSTOM (Background Gradasi & Desain) ----------
+# ---------- CSS KUSTOM (KONTRASTING) ----------
 st.markdown("""
 <style>
     /* Background gradasi lembut */
     .stApp {
         background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
     }
-    
+
     /* Kartu putih dengan bayangan */
     .card {
         background-color: #ffffff;
@@ -29,26 +29,25 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(0,0,0,0.08);
         margin-bottom: 25px;
         border: 1px solid rgba(255,255,255,0.5);
-        color: #1a237e; /* Warna teks gelap */
+        color: #1a237e;  /* Warna teks gelap */
     }
-    
+
     /* Judul utama */
     .main-title {
         text-align: center;
         font-size: 2.2rem;
         font-weight: 700;
-        color: #ffffff; /*putih*/
+        color: #ffffff;  /* PUTIH */
         margin-bottom: 5px;
     }
-    
     .sub-title {
         text-align: center;
         font-size: 1rem;
-        color: #e3f2fd; /* Biru sangat terang */
+        color: #e3f2fd;  /* Biru sangat muda (terang) */
         margin-bottom: 20px;
     }
-    
-    /* Header setiap bagian */
+
+    /* Header bagian */
     .section-header {
         font-size: 1.2rem;
         font-weight: 600;
@@ -57,13 +56,13 @@ st.markdown("""
         padding-left: 12px;
         margin-bottom: 15px;
     }
-    
+
     /* Label wajib */
     .required {
         color: #d32f2f;
         font-weight: 600;
     }
-    
+
     /* Tombol Submit */
     .stButton button {
         background: linear-gradient(135deg, #1a237e, #283593) !important;
@@ -80,21 +79,23 @@ st.markdown("""
         transform: scale(1.01) !important;
         box-shadow: 0 8px 25px rgba(26,35,126,0.3) !important;
     }
-    
-    /* Checkbox lebih besar */
-    .stCheckbox label {
-        font-size: 1.05rem !important;
-        padding: 5px 0 !important;
-    }
-    
-    /* Input text lebih besar */
+
+    /* Input text */
     .stTextInput input, .stSelectbox select {
         font-size: 1rem !important;
         border-radius: 12px !important;
         border: 2px solid #e0e0e0 !important;
         padding: 10px 15px !important;
+        color: #1a237e !important;  /* Teks gelap */
     }
-    
+
+    /* Checkbox */
+    .stCheckbox label {
+        font-size: 1.05rem !important;
+        padding: 5px 0 !important;
+        color: #1a237e !important;  /* Teks gelap */
+    }
+
     /* Info box */
     .info-box {
         background: #e3f2fd;
@@ -104,7 +105,7 @@ st.markdown("""
         color: #0d47a1;
         margin: 10px 0;
     }
-    
+
     /* Warning box */
     .warning-box {
         background: #fff3e0;
@@ -114,12 +115,27 @@ st.markdown("""
         color: #e65100;
         margin: 10px 0;
     }
+
+    /* Footer */
+    .footer {
+        text-align: center;
+        padding: 30px 0 10px 0;
+        color: #90a4ae;
+        font-size: 0.8rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- HEADER ----------
+# ---------- HEADER (Background Biru, Teks Putih) ----------
 st.markdown("""
-<div style="text-align: center; padding: 10px 0 5px 0;">
+<div style="
+    background: linear-gradient(135deg, #0d47a1, #1a237e);
+    padding: 30px 20px;
+    border-radius: 20px;
+    text-align: center;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+">
     <span style="font-size: 3rem;">🏫</span>
     <h1 class="main-title">Pendaftaran Kursus</h1>
     <p class="sub-title">📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
