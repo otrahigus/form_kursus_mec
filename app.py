@@ -384,7 +384,7 @@ with card():
         sekolah_kelas = st.selectbox(
             "Sekolah & Kelas *",
             ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3"]
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "Umum"]
         )
     with col4:
         pekerjaan_ortu = st.selectbox(
