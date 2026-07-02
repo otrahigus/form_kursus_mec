@@ -1,248 +1,302 @@
 import streamlit as st
 import requests
 from datetime import datetime
-import base64
 
-# ---------- KONFIGURASI ----------
+# =========================================================
+# KONFIGURASI
+# =========================================================
 SHEET_URL = "https://api.sheetbest.com/sheets/72f98a03-5ba2-434d-b486-b66320253153"
 
-# ---------- PENGATURAN HALAMAN ----------
 st.set_page_config(
-    page_title="Form Pendaftaran Kursus",
-    page_icon="📝",
-    layout="centered"
+    page_title="Pendaftaran Kursus",
+    page_icon="🏫",
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# ---------- CSS KUSTOM (KONTRASTING) ----------
+# =========================================================
+# CSS
+# =========================================================
 st.markdown("""
 <style>
-    /* Background gradasi lembut */
+    /* ---------- Global ---------- */
     .stApp {
-        background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+        background: linear-gradient(160deg, #eef4ff 0%, #f4fbf6 45%, #fff9ef 100%);
+    }
+    #MainMenu, footer {visibility: hidden;}
+    div.block-container {
+        padding-top: 1.2rem;
+        padding-bottom: 3rem;
+        max-width: 640px;
     }
 
-    /* Kartu putih dengan bayangan */
-    .card {
-        background-color: #ffffff;
-        padding: 25px 20px;
-        border-radius: 20px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-        margin-bottom: 25px;
-        border: 1px solid rgba(255,255,255,0.5);
-        color: #1a237e;  /* Warna teks gelap */
+    /* ---------- Header ---------- */
+    .hero {
+        background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%);
+        padding: 34px 24px 30px 24px;
+        border-radius: 22px;
+        text-align: center;
+        margin-bottom: 22px;
+        box-shadow: 0 10px 30px rgba(26,35,126,0.25);
+    }
+    .hero .emoji { font-size: 2.8rem; display:block; margin-bottom: 6px;}
+    .hero h1 {
+        color: #ffffff;
+        font-size: 1.7rem;
+        font-weight: 800;
+        margin: 0 0 6px 0;
+        letter-spacing: -0.3px;
+    }
+    .hero p {
+        color: #dbe4ff;
+        font-size: 0.95rem;
+        margin: 0;
+        line-height: 1.4;
     }
 
-    /* Judul utama */
-    .main-title {
-        text-align: center;
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #ffffff;  /* PUTIH */
-        margin-bottom: 5px;
-    }
-    .sub-title {
-        text-align: center;
-        font-size: 1rem;
-        color: #e3f2fd;  /* Biru sangat muda (terang) */
+    /* ---------- Progress ---------- */
+    .progress-wrap {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 12px 16px;
         margin-bottom: 20px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    }
+    .progress-label {
+        display:flex; justify-content: space-between;
+        font-size: 0.82rem; font-weight: 600; color:#455a64;
+        margin-bottom: 6px;
     }
 
-    /* Header bagian */
-    .section-header {
-        font-size: 1.2rem;
-        font-weight: 600;
+    /* ---------- Section card ---------- */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 18px !important;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        border: 1px solid rgba(0,0,0,0.04) !important;
+    }
+    .section-title {
+        font-size: 1.05rem;
+        font-weight: 700;
         color: #0d47a1;
-        border-left: 5px solid #42a5f5;
-        padding-left: 12px;
-        margin-bottom: 15px;
+        display:flex; align-items:center; gap:8px;
+        margin-bottom: 4px;
+    }
+    .section-sub {
+        font-size: 0.85rem;
+        color: #78909c;
+        margin-bottom: 14px;
+    }
+    .required { color: #e53935; }
+
+    /* ---------- Inputs ---------- */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] {
+        border-radius: 12px !important;
+    }
+    .stTextInput input:focus {
+        border-color: #3949ab !important;
+        box-shadow: 0 0 0 2px rgba(57,73,171,0.15) !important;
     }
 
-    /* Label wajib */
-    .required {
-        color: #d32f2f;
+    /* ---------- Program chips (checkbox look) ---------- */
+    .stCheckbox {
+        background: #f7f9fc;
+        border-radius: 12px;
+        padding: 4px 10px;
+        margin-bottom: 6px;
+        border: 1px solid #e8eaf0;
+        transition: all .15s ease;
+    }
+    .stCheckbox:hover { background: #eef2fb; }
+    .stCheckbox label p { font-size: 0.98rem !important; color:#263238 !important; font-weight: 500; }
+
+    /* ---------- Alerts ---------- */
+    .hint-box {
+        background: #e8f0fe;
+        border-left: 4px solid #1e88e5;
+        color: #0d47a1;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+    .warn-box {
+        background: #fff3e0;
+        border-left: 4px solid #fb8c00;
+        color: #e65100;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+    .ok-box {
+        background: #e8f5e9;
+        border-left: 4px solid #43a047;
+        color: #2e7d32;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        margin-top: 6px;
         font-weight: 600;
     }
+    .muted-box {
+        background: #f5f5f5;
+        border-left: 4px solid #b0bec5;
+        color: #607d8b;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+    }
 
-    /* Tombol Submit */
+    /* ---------- Submit button ---------- */
     .stButton button {
-        background: linear-gradient(135deg, #1a237e, #283593) !important;
+        background: linear-gradient(135deg, #1a237e, #3949ab) !important;
         color: white !important;
-        font-size: 1.3rem !important;
-        font-weight: 600 !important;
-        padding: 15px !important;
-        border-radius: 15px !important;
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        padding: 14px !important;
+        border-radius: 14px !important;
         border: none !important;
         width: 100% !important;
-        transition: all 0.3s ease !important;
+        box-shadow: 0 8px 20px rgba(26,35,126,0.28) !important;
+        transition: transform .15s ease, box-shadow .15s ease !important;
     }
     .stButton button:hover {
-        transform: scale(1.01) !important;
-        box-shadow: 0 8px 25px rgba(26,35,126,0.3) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 12px 26px rgba(26,35,126,0.35) !important;
     }
 
-    /* Input text */
-    .stTextInput input, .stSelectbox select {
-        font-size: 1rem !important;
-        border-radius: 12px !important;
-        border: 2px solid #e0e0e0 !important;
-        padding: 10px 15px !important;
-        color: #1a237e !important;  /* Teks gelap */
-    }
-
-    /* Checkbox */
-    .stCheckbox label {
-        font-size: 1.05rem !important;
-        padding: 5px 0 !important;
-        color: #1a237e !important;  /* Teks gelap */
-    }
-
-    /* Info box */
-    .info-box {
-        background: #e3f2fd;
-        padding: 15px 20px;
-        border-radius: 15px;
-        border-left: 5px solid #1e88e5;
-        color: #0d47a1;
-        margin: 10px 0;
-    }
-
-    /* Warning box */
-    .warning-box {
-        background: #fff3e0;
-        padding: 15px 20px;
-        border-radius: 15px;
-        border-left: 5px solid #ff9800;
-        color: #e65100;
-        margin: 10px 0;
-    }
-
-    /* Footer */
-    .footer {
+    .footer-note {
         text-align: center;
-        padding: 30px 0 10px 0;
+        padding: 26px 0 6px 0;
         color: #90a4ae;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- HEADER (Background Biru, Teks Putih) ----------
+# =========================================================
+# HEADER
+# =========================================================
 st.markdown("""
-<div style="
-    background: linear-gradient(135deg, #0d47a1, #1a237e);
-    padding: 30px 20px;
-    border-radius: 20px;
-    text-align: center;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-">
-    <span style="font-size: 3rem;">🏫</span>
-    <h1 class="main-title">Pendaftaran Kursus</h1>
-    <p class="sub-title">📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
+<div class="hero">
+    <span class="emoji">🏫</span>
+    <h1>Pendaftaran Kursus</h1>
+    <p>📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ==========================================
+# =========================================================
 # BAGIAN 1: DATA DIRI
-# ==========================================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.markdown('<div class="section-header">👤 Data Diri Siswa</div>', unsafe_allow_html=True)
+# =========================================================
+with st.container(border=True):
+    st.markdown('<div class="section-title">👤 Data Diri Siswa</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Kolom bertanda <span class="required">*</span> wajib diisi</div>', unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
-with col1:
     nama = st.text_input("Nama Lengkap Siswa *", placeholder="Contoh: Ahmad Fauzi")
     nama_panggilan = st.text_input("Nama Panggilan (opsional)", placeholder="Contoh: Ahmad")
     orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
-with col2:
-    wa = st.text_input("Nomor WhatsApp Orang Tua *", placeholder="81234567890")
-    alamat = st.text_input("Alamat (RT / Nama Dusun) *", placeholder="Contoh: RT 02, Dusun Krajan")
 
-st.markdown('</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
+    with col2:
+        alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
 
-# ==========================================
+# =========================================================
 # BAGIAN 2: DATA PENDUKUNG
-# ==========================================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.markdown('<div class="section-header">📚 Data Pendukung</div>', unsafe_allow_html=True)
+# =========================================================
+with st.container(border=True):
+    st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Membantu kami menyesuaikan kelas</div>', unsafe_allow_html=True)
 
-col3, col4 = st.columns(2)
-with col3:
-    sekolah_kelas = st.selectbox(
-        "Sekolah & Kelas *",
-        ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-         "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3"]
-    )
-with col4:
-    pekerjaan_ortu = st.selectbox(
-        "Pekerjaan Orang Tua",
-        ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
-    )
+    col3, col4 = st.columns(2)
+    with col3:
+        sekolah_kelas = st.selectbox(
+            "Sekolah & Kelas *",
+            ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3"]
+        )
+    with col4:
+        pekerjaan_ortu = st.selectbox(
+            "Pekerjaan Orang Tua",
+            ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
+        )
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ==========================================
+# =========================================================
 # BAGIAN 3: PILIHAN PROGRAM
-# ==========================================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.markdown('<div class="section-header">🎯 Pilih Program Kursus</div>', unsafe_allow_html=True)
-st.markdown("*Centang semua program yang ingin diikuti.*")
+# =========================================================
+with st.container(border=True):
+    st.markdown('<div class="section-title">🎯 Pilih Program Kursus</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Centang semua program yang ingin diikuti</div>', unsafe_allow_html=True)
 
-cek_program_a = st.checkbox("💻 Program MATH DROP-IN")
-cek_program_b = st.checkbox("🎨 Program ENGLISH FOR KIDS")
-cek_program_c = st.checkbox("📖 Program ENGLISH FOR TEENS")
-cek_program_d = st.checkbox("📖 Program PREMIUM MATH")
+    cek_program_a = st.checkbox("💻 Program MATH DROP-IN")
+    cek_program_b = st.checkbox("🎨 Program ENGLISH FOR KIDS")
+    cek_program_c = st.checkbox("📖 Program ENGLISH FOR TEENS")
+    cek_program_d = st.checkbox("✏️ Program PREMIUM MATH")
 
-programs = []
-if cek_program_a:
-    programs.append("Program MATH DROP-IN")
-if cek_program_b:
-    programs.append("Program ENGLISH FOR KIDS")
-if cek_program_c:
-    programs.append("Program ENGLISH FOR TEENS")
-if cek_program_d:
-    programs.append("Program PREMIUM MATH")
+    programs = []
+    if cek_program_a: programs.append("Program MATH DROP-IN")
+    if cek_program_b: programs.append("Program ENGLISH FOR KIDS")
+    if cek_program_c: programs.append("Program ENGLISH FOR TEENS")
+    if cek_program_d: programs.append("Program PREMIUM MATH")
 
-st.markdown('</div>', unsafe_allow_html=True)
+    if programs:
+        st.markdown(f'<div class="ok-box">✅ {len(programs)} program dipilih</div>', unsafe_allow_html=True)
 
-# ==========================================
+# =========================================================
 # BAGIAN 4: JADWAL PROGRAM A (MUNCUL OTOMATIS)
-# ==========================================
+# =========================================================
 jadwal_a = []
 if cek_program_a:
-    st.markdown('<div class="card" style="border: 2px solid #42a5f5;">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">📅 Jadwal Program MATH DROP-IN</div>', unsafe_allow_html=True)
-    st.markdown("*Centang jadwal yang diinginkan (boleh pilih 1-5).*")
-    
-    if st.checkbox("🕐 Sesi 1 (Senin, 18.00 - 20.00)"):
-        jadwal_a.append("Sesi 1 (Senin, 18.00 - 20.00)")
-    if st.checkbox("🕑 Sesi 2 (Selasa, 18.00 - 20.00)"):
-        jadwal_a.append("Sesi 2 (Selasa, 18.00 - 20.00)")
-    if st.checkbox("🕒 Sesi 3 (Rabu, 18.00 - 20.00)"):
-        jadwal_a.append("Sesi 3 (Rabu, 18.00 - 20.00)")
-    if st.checkbox("🕓 Sesi 4 (Kamis, 18.00 - 20.00)"):
-        jadwal_a.append("Sesi 4 (Kamis, 18.00 - 20.00)")
-    if st.checkbox("🕔 Sesi 5 (Jumat, 18.00 - 20.00)"):
-        jadwal_a.append("Sesi 5 (Jumat, 18.00 - 20.00)")
+    with st.container(border=True):
+        st.markdown('<div class="section-title">📅 Jadwal MATH DROP-IN</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Centang jadwal yang diinginkan (boleh lebih dari 1)</div>', unsafe_allow_html=True)
 
-    if len(jadwal_a) == 0:
-        st.markdown('<div class="warning-box">⚠️ Belum ada jadwal yang dipilih. Centang minimal 1.</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div style="color: #2e7d32; font-weight: 500;">✅ {len(jadwal_a)} jadwal dipilih</div>', unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        sesi_list = [
+            ("🕐 Sesi 1 (Senin, 18.00–20.00)", "Sesi 1 (Senin, 18.00 - 20.00)"),
+            ("🕑 Sesi 2 (Selasa, 18.00–20.00)", "Sesi 2 (Selasa, 18.00 - 20.00)"),
+            ("🕒 Sesi 3 (Rabu, 18.00–20.00)", "Sesi 3 (Rabu, 18.00 - 20.00)"),
+            ("🕓 Sesi 4 (Kamis, 18.00–20.00)", "Sesi 4 (Kamis, 18.00 - 20.00)"),
+            ("🕔 Sesi 5 (Jumat, 18.00–20.00)", "Sesi 5 (Jumat, 18.00 - 20.00)"),
+        ]
+        for label, value in sesi_list:
+            if st.checkbox(label):
+                jadwal_a.append(value)
+
+        if len(jadwal_a) == 0:
+            st.markdown('<div class="warn-box">⚠️ Belum ada jadwal dipilih. Centang minimal 1.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="ok-box">✅ {len(jadwal_a)} jadwal dipilih</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="card" style="background: #f5f5f5;">', unsafe_allow_html=True)
-    st.markdown('<div class="info-box">ℹ️ Karena tidak memilih Program MATH DROP-IN, bagian jadwal tidak muncul.</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="muted-box">ℹ️ Bagian jadwal akan muncul otomatis jika Anda memilih Program MATH DROP-IN.</div>', unsafe_allow_html=True)
 
-# ==========================================
+st.write("")
+
+# =========================================================
+# PROGRESS INDIKATOR (opsional, membantu pengguna)
+# =========================================================
+required_fields = [nama, orang_tua, wa, alamat]
+filled = sum(1 for f in required_fields if f.strip())
+if sekolah_kelas != "Pilih...":
+    filled += 1
+if programs:
+    filled += 1
+total_steps = len(required_fields) + 2
+pct = int((filled / total_steps) * 100)
+
+st.markdown(f"""
+<div class="progress-wrap">
+    <div class="progress-label"><span>Kelengkapan formulir</span><span>{pct}%</span></div>
+</div>
+""", unsafe_allow_html=True)
+st.progress(pct / 100)
+
+# =========================================================
 # TOMBOL SUBMIT & SIMPAN DATA
-# ==========================================
-st.markdown("---")
+# =========================================================
 submitted = st.button("✅ Daftar Sekarang", type="primary", use_container_width=True)
 
 if submitted:
-    # Validasi
     if not nama or not orang_tua or not wa or not alamat:
         st.error("❌ Mohon lengkapi semua data yang bertanda *.")
     elif sekolah_kelas == "Pilih...":
@@ -252,7 +306,6 @@ if submitted:
     elif cek_program_a and len(jadwal_a) == 0:
         st.error("❌ Anda memilih Program MATH DROP-IN, tapi belum memilih jadwal. Centang minimal 1.")
     else:
-        # Siapkan data
         data_pendaftar = {
             "tanggal_daftar": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "nama_lengkap": nama,
@@ -266,11 +319,10 @@ if submitted:
             "jadwal_a": ", ".join(jadwal_a) if jadwal_a else "-"
         }
 
-        # Kirim ke Sheet.best
         try:
             response = requests.post(SHEET_URL, json=data_pendaftar)
             if response.status_code in [200, 201]:
-                st.success(f"✅ Pendaftaran *{nama}* berhasil! Data sudah tersimpan.")
+                st.success(f"✅ Pendaftaran **{nama}** berhasil! Data sudah tersimpan.")
                 st.balloons()
             else:
                 st.error(f"❌ Gagal simpan ke server. Status: {response.status_code}")
@@ -280,18 +332,19 @@ if submitted:
             st.info("Data tidak tersimpan, berikut datanya (screenshot/catat):")
             st.json(data_pendaftar)
 
-        # Tampilkan ringkasan
         with st.expander("📋 Lihat Ringkasan Data Pendaftaran"):
-            st.write(f"*Nama:* {nama}")
-            st.write(f"*WA:* {wa}")
-            st.write(f"*Program:* {', '.join(programs)}")
+            st.write(f"**Nama:** {nama}")
+            st.write(f"**WA:** {wa}")
+            st.write(f"**Program:** {', '.join(programs)}")
             if jadwal_a:
-                st.write(f"*Jadwal A:* {', '.join(jadwal_a)}")
+                st.write(f"**Jadwal A:** {', '.join(jadwal_a)}")
 
-# ---------- FOOTER ----------
+# =========================================================
+# FOOTER
+# =========================================================
 st.markdown("""
-<div style="text-align: center; padding: 30px 0 10px 0; color: #90a4ae; font-size: 0.8rem;">
-    <hr style="border: none; border-top: 2px solid #e0e0e0;">
+<div class="footer-note">
+    <hr style="border: none; border-top: 1px solid #dfe6ee; margin-bottom: 12px;">
     Made with ❤️ untuk warga kampung
 </div>
 """, unsafe_allow_html=True)
