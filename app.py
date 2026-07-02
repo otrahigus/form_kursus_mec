@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ---------- CSS KUSTOM (Background Gradasi & Desain) ----------
-st.image("https://drive.google.com/file/d/1HB7JWLcFGoRanNczUo-zMg9kzMvp22ah/view?usp=share_link")
+st.image("https://drive.google.com/file/d/1HB7JWLcFGoRanNczUo-zMg9kzMvp22ah/view?usp=share_link", use_column_width=True)
 st.markdown("""
 <style>
     /* Background gradasi biru ke hijau */
