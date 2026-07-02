@@ -1,11 +1,29 @@
 import streamlit as st
 import requests
 from datetime import datetime
+import base64
+import os
 
 # =========================================================
 # KONFIGURASI
 # =========================================================
 SHEET_URL = "https://api.sheetbest.com/sheets/72f98a03-5ba2-434d-b486-b66320253153"
+
+# Taruh file logo di folder yang sama dengan script ini, lalu ganti nama filenya di sini.
+# Kosongkan / biarkan file tidak ada jika belum punya logo -> otomatis pakai emoji 🏫
+LOGO_PATH = "logo.png"
+
+def get_logo_base64(path):
+    """Baca file gambar & ubah ke base64 agar bisa ditempel di dalam HTML/CSS."""
+    if path and os.path.exists(path):
+        with open(path, "rb") as f:
+            data = f.read()
+        ext = path.split(".")[-1].lower()
+        mime = "image/png" if ext == "png" else "image/jpeg" if ext in ("jpg", "jpeg") else "image/svg+xml" if ext == "svg" else "image/png"
+        return f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    return None
+
+logo_data_uri = get_logo_base64(LOGO_PATH)
 
 st.set_page_config(
     page_title="Pendaftaran Kursus",
@@ -13,6 +31,14 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed"
 )
+
+# Fallback: st.container(border=True) hanya ada di Streamlit >= 1.28.
+# Jika versi lebih lama, gunakan container biasa agar tidak error.
+def card():
+    try:
+        return st.container(border=True)
+    except TypeError:
+        return st.container()
 
 # =========================================================
 # CSS
@@ -55,6 +81,17 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(11,61,145,0.3);
     }
     .hero .emoji { font-size: 2.8rem; display:block; margin-bottom: 6px;}
+    .hero .logo {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        margin: 0 auto 10px auto;
+        display: block;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    }
     .hero h1 {
         color: #ffffff !important;
         font-size: 1.7rem;
@@ -230,9 +267,14 @@ st.markdown("""
 # =========================================================
 # HEADER
 # =========================================================
-st.markdown("""
+if logo_data_uri:
+    header_icon_html = f'<img src="{logo_data_uri}" class="logo" alt="logo">'
+else:
+    header_icon_html = '<span class="emoji">🏫</span>'
+
+st.markdown(f"""
 <div class="hero">
-    <span class="emoji">🏫</span>
+    {header_icon_html}
     <h1>Pendaftaran Kursus</h1>
     <p>📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
 </div>
@@ -241,7 +283,7 @@ st.markdown("""
 # =========================================================
 # BAGIAN 1: DATA DIRI
 # =========================================================
-with st.container(border=True):
+with card():
     st.markdown('<div class="section-title">👤 Data Diri Siswa</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Kolom bertanda <span class="required">*</span> wajib diisi</div>', unsafe_allow_html=True)
 
@@ -258,7 +300,7 @@ with st.container(border=True):
 # =========================================================
 # BAGIAN 2: DATA PENDUKUNG
 # =========================================================
-with st.container(border=True):
+with card():
     st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Membantu kami menyesuaikan kelas</div>', unsafe_allow_html=True)
 
@@ -278,7 +320,7 @@ with st.container(border=True):
 # =========================================================
 # BAGIAN 3: PILIHAN PROGRAM
 # =========================================================
-with st.container(border=True):
+with card():
     st.markdown('<div class="section-title">🎯 Pilih Program Kursus</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Centang semua program yang ingin diikuti</div>', unsafe_allow_html=True)
 
@@ -301,7 +343,7 @@ with st.container(border=True):
 # =========================================================
 jadwal_a = []
 if cek_program_a:
-    with st.container(border=True):
+    with card():
         st.markdown('<div class="section-title">📅 Jadwal MATH DROP-IN</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-sub">Centang jadwal yang diinginkan (boleh lebih dari 1)</div>', unsafe_allow_html=True)
 
