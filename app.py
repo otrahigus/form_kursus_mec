@@ -31,6 +31,16 @@ def get_logo_base64(path):
 logo_data_uri = get_logo_base64(LOGO_PATH)
 poster_data_uri = get_logo_base64(POSTER_PATH)
 
+BULAN_ID = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+]
+
+def format_tanggal_indonesia(dt):
+    """Format tanggal jadi teks 'DD Bulan YYYY HH:MM:SS' agar Google Sheets
+    tidak otomatis mengonversinya jadi tanggal/angka (yang sering bikin berantakan)."""
+    return f"{dt.day:02d} {BULAN_ID[dt.month - 1]} {dt.year} {dt.strftime('%H:%M:%S')}"
+
 st.set_page_config(
     page_title="Pendaftaran Kursus",
     page_icon="🏫",
@@ -435,7 +445,7 @@ if submitted:
         pekerjaan_final = pekerjaan_ortu_lainnya.strip() if pekerjaan_ortu == "Lainnya" else pekerjaan_ortu
 
         data_pendaftar = {
-            "tanggal_daftar": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "tanggal_daftar": format_tanggal_indonesia(datetime.now()),
             "nama_lengkap": nama,
             "nama_panggilan": nama_panggilan if nama_panggilan else "-",
             "orang_tua": orang_tua,
