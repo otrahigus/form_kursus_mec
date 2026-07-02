@@ -41,6 +41,49 @@ def format_tanggal_indonesia(dt):
     tidak otomatis mengonversinya jadi tanggal/angka (yang sering bikin berantakan)."""
     return f"{dt.day:02d} {BULAN_ID[dt.month - 1]} {dt.year} {dt.strftime('%H:%M:%S')}"
 
+def normalisasi_teks(s):
+    """Bersihkan teks untuk perbandingan: hilangkan spasi berlebih & abaikan huruf besar/kecil."""
+    return " ".join((s or "").strip().lower().split())
+
+def cek_data_existing(nama_lengkap, no_wa):
+    """Cek ke sheet apakah kombinasi Nama Siswa + No. WA ini sudah pernah terdaftar.
+    Menggunakan kombinasi (bukan No. WA saja) supaya kakak-adik yang memakai
+    nomor WA orang tua yang sama tetap bisa mendaftar masing-masing.
+
+    Pencocokan nama dibuat toleran: mengabaikan huruf besar/kecil dan spasi
+    berlebih, karena orang tua bisa mengetik nama sedikit berbeda saat submit ulang.
+
+    Mengembalikan data lama (dict, sesuai apa adanya di sheet) jika ada, atau None jika belum ada.
+    """
+    try:
+        # Filter dulu berdasarkan No. WA (exact match) di server, lalu nama
+        # dibandingkan secara toleran di sisi kode.
+        resp = requests.get(SHEET_URL, params={"no_wa": no_wa}, timeout=10)
+        if resp.status_code != 200:
+            return None
+        rows = resp.json()
+        target_nama = normalisasi_teks(nama_lengkap)
+        for row in rows:
+            if normalisasi_teks(row.get("nama_lengkap", "")) == target_nama:
+                return row
+        return None
+    except Exception:
+        # Jika gagal cek (mis. koneksi), anggap tidak ada duplikat agar tidak menghalangi pendaftaran
+        return None
+
+def simpan_data_baru(data_pendaftar):
+    return requests.post(SHEET_URL, json=data_pendaftar, timeout=10)
+
+def update_data_lama(nama_lengkap, no_wa, data_pendaftar):
+    # Gunakan nilai nama & WA PERSIS seperti yang tersimpan di sheet (bukan input baru)
+    # agar filter PATCH pasti cocok, walau penulisan huruf besar/kecil user berbeda.
+    return requests.patch(
+        SHEET_URL,
+        params={"nama_lengkap": nama_lengkap, "no_wa": no_wa},
+        json=data_pendaftar,
+        timeout=10
+    )
+
 st.set_page_config(
     page_title="Pendaftaran Kursus",
     page_icon="🏫",
@@ -428,6 +471,9 @@ st.progress(pct / 100)
 # =========================================================
 # TOMBOL SUBMIT & SIMPAN DATA
 # =========================================================
+if "duplikat_data" not in st.session_state:
+    st.session_state.duplikat_data = None
+
 submitted = st.button("✅ Daftar Sekarang", type="primary", use_container_width=True)
 
 if submitted:
@@ -457,25 +503,65 @@ if submitted:
             "jadwal_a": ", ".join(jadwal_a) if jadwal_a else "-"
         }
 
-        try:
-            response = requests.post(SHEET_URL, json=data_pendaftar)
-            if response.status_code in [200, 201]:
-                st.success(f"✅ Pendaftaran **{nama}** berhasil! Data sudah tersimpan.")
-                st.balloons()
-            else:
-                st.error(f"❌ Gagal simpan ke server. Status: {response.status_code}")
-                st.json(data_pendaftar)
-        except Exception as e:
-            st.error(f"❌ Error koneksi: {e}")
-            st.info("Data tidak tersimpan, berikut datanya (screenshot/catat):")
-            st.json(data_pendaftar)
+        # Cek apakah kombinasi Nama Siswa + No. WhatsApp ini sudah pernah terdaftar
+        data_lama = cek_data_existing(nama, wa)
 
-        with st.expander("📋 Lihat Ringkasan Data Pendaftaran"):
-            st.write(f"**Nama:** {nama}")
-            st.write(f"**WA:** {wa}")
-            st.write(f"**Program:** {', '.join(programs)}")
-            if jadwal_a:
-                st.write(f"**Jadwal A:** {', '.join(jadwal_a)}")
+        if data_lama is None:
+            # Belum pernah daftar -> simpan sebagai data baru
+            try:
+                response = simpan_data_baru(data_pendaftar)
+                if response.status_code in [200, 201]:
+                    st.success(f"✅ Pendaftaran **{nama}** berhasil! Data sudah tersimpan.")
+                    st.balloons()
+                else:
+                    st.error(f"❌ Gagal simpan ke server. Status: {response.status_code}")
+                    st.json(data_pendaftar)
+            except Exception as e:
+                st.error(f"❌ Error koneksi: {e}")
+                st.info("Data tidak tersimpan, berikut datanya (screenshot/catat):")
+                st.json(data_pendaftar)
+        else:
+            # Nama Siswa + No. WA sudah pernah terdaftar -> simpan sementara, minta konfirmasi update
+            st.session_state.duplikat_data = {
+                "data_baru": data_pendaftar,
+                "nama_lama": data_lama.get("nama_lengkap", "-"),
+                # Pakai nilai PERSIS dari sheet (bukan input form) agar filter update pasti cocok
+                "nama_lengkap": data_lama.get("nama_lengkap", nama),
+                "no_wa": data_lama.get("no_wa", wa)
+            }
+
+# ---------- Konfirmasi jika ditemukan data duplikat ----------
+if st.session_state.duplikat_data:
+    dup = st.session_state.duplikat_data
+    with card():
+        st.markdown(
+            f'<div class="warn-box">⚠️ Siswa <b>{dup["nama_lama"]}</b> dengan nomor WhatsApp ini sudah pernah '
+            f'terdaftar sebelumnya. Data lama akan diganti (replace) jika Anda memilih "Update Data".</div>',
+            unsafe_allow_html=True
+        )
+        colA, colB = st.columns(2)
+        with colA:
+            konfirmasi_update = st.button("🔄 Ya, Update Data", use_container_width=True)
+        with colB:
+            batal_update = st.button("✖️ Batal", use_container_width=True)
+
+        if konfirmasi_update:
+            try:
+                response = update_data_lama(dup["nama_lengkap"], dup["no_wa"], dup["data_baru"])
+                if response.status_code in [200, 201]:
+                    st.success(f"✅ Data **{dup['data_baru']['nama_lengkap']}** berhasil diperbarui.")
+                    st.balloons()
+                else:
+                    st.error(f"❌ Gagal update data. Status: {response.status_code}")
+                    st.json(dup["data_baru"])
+            except Exception as e:
+                st.error(f"❌ Error koneksi: {e}")
+                st.json(dup["data_baru"])
+            st.session_state.duplikat_data = None
+
+        if batal_update:
+            st.info("Pendaftaran dibatalkan. Data lama tidak diubah.")
+            st.session_state.duplikat_data = None
 
 # =========================================================
 # FOOTER
