@@ -5,7 +5,7 @@ from datetime import datetime
 
 # ---------- KONFIGURASI ----------
 # Ganti URL ini dengan link API Google Sheets dari Sheet.best (nanti dijelaskan)
-SHEET_URL = "https://api.sheetbest.com/sheets/c19c4310-8e7a-4680-8442-4b5784579e0c" 
+SHEET_URL = "https://api.sheetbest.com/sheets/72f98a03-5ba2-434d-b486-b66320253153" 
 
 # ---------- JUDUL HALAMAN ----------
 st.set_page_config(page_title="Form Pendaftaran Kursus", page_icon="📝")
