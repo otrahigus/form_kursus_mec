@@ -3,6 +3,7 @@ import requests
 from datetime import datetime
 import base64
 import os
+import urllib.parse
 
 # =========================================================
 # KONFIGURASI
@@ -53,12 +54,15 @@ def cek_data_existing(nama_lengkap, no_wa):
     Pencocokan nama dibuat toleran: mengabaikan huruf besar/kecil dan spasi
     berlebih, karena orang tua bisa mengetik nama sedikit berbeda saat submit ulang.
 
+    Catatan: sheet.best memfilter 1 kolom lewat URL path (bukan query param),
+    contoh: SHEET_URL/no_wa/081234567890 -- jadi kita filter di server berdasarkan
+    No. WA saja (exact match), lalu nama dibandingkan secara toleran di sisi kode.
+
     Mengembalikan data lama (dict, sesuai apa adanya di sheet) jika ada, atau None jika belum ada.
     """
     try:
-        # Filter dulu berdasarkan No. WA (exact match) di server, lalu nama
-        # dibandingkan secara toleran di sisi kode.
-        resp = requests.get(SHEET_URL, params={"no_wa": no_wa}, timeout=10)
+        url = f"{SHEET_URL}/no_wa/{urllib.parse.quote(str(no_wa), safe='')}"
+        resp = requests.get(url, timeout=10)
         if resp.status_code != 200:
             return None
         rows = resp.json()
@@ -75,10 +79,11 @@ def simpan_data_baru(data_pendaftar):
     return requests.post(SHEET_URL, json=data_pendaftar, timeout=10)
 
 def update_data_lama(nama_lengkap, no_wa, data_pendaftar):
+    # Update berbasis gabungan 2 kolom -> pakai endpoint /search sesuai dokumentasi sheet.best
     # Gunakan nilai nama & WA PERSIS seperti yang tersimpan di sheet (bukan input baru)
-    # agar filter PATCH pasti cocok, walau penulisan huruf besar/kecil user berbeda.
+    # agar filter update pasti cocok, walau penulisan huruf besar/kecil user berbeda.
     return requests.patch(
-        SHEET_URL,
+        f"{SHEET_URL}/search",
         params={"nama_lengkap": nama_lengkap, "no_wa": no_wa},
         json=data_pendaftar,
         timeout=10
@@ -384,7 +389,7 @@ with card():
         sekolah_kelas = st.selectbox(
             "Sekolah & Kelas *",
             ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "Umum"]
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3"]
         )
     with col4:
         pekerjaan_ortu = st.selectbox(
