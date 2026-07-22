@@ -389,7 +389,7 @@ with card():
         sekolah_kelas = st.selectbox(
             "Sekolah & Kelas *",
             ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3"]
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
         )
     with col4:
         pekerjaan_ortu = st.selectbox(
@@ -415,12 +415,15 @@ with card():
     cek_program_b = st.checkbox("🎨 Program ENGLISH FOR KIDS")
     cek_program_c = st.checkbox("📖 Program ENGLISH FOR TEENS")
     cek_program_d = st.checkbox("✏️ Program PREMIUM MATH")
+    cek_program_e = st.checkbox(" Program CALISTUNG")
 
     programs = []
     if cek_program_a: programs.append("Program MATH DROP-IN")
     if cek_program_b: programs.append("Program ENGLISH FOR KIDS")
     if cek_program_c: programs.append("Program ENGLISH FOR TEENS")
     if cek_program_d: programs.append("Program PREMIUM MATH")
+    if cek_program_e: programs.append("Program CALISTUNG")
+    
 
     if programs:
         st.markdown(f'<div class="ok-box">✅ {len(programs)} program dipilih</div>', unsafe_allow_html=True)
