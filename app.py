@@ -353,18 +353,11 @@ with card():
     nama = st.text_input("Nama Lengkap *", placeholder="Contoh: Ahmad Fauzi")
     nama_panggilan = st.text_input("Nama Panggilan (opsional)", placeholder="Contoh: Ahmad")
     
+    # =========================================================
+    # SEKOLAH & KELAS (DITARUH SETELAH NAMA PANGGILAN)
+    # =========================================================
     if is_offline:
-        # OFFLINE: selalu untuk anak dengan data orang tua
-        st.info("📌 Pendaftaran offline untuk siswa (anak)")
-        orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
-        with col2:
-            alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-        
-        # Data kelas tetap ditampilkan
+        # OFFLINE: pilihan sekolah/kelas
         sekolah_kelas = st.selectbox(
             "Sekolah & Kelas *",
             ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
@@ -372,6 +365,26 @@ with card():
         )
         is_umum = sekolah_kelas == "UMUM"
         is_diri_sendiri = False
+        
+        # TAMPILKAN DATA ORANG TUA (jika bukan UMUM)
+        if is_umum:
+            st.info("📌 Pendaftaran untuk umum (dewasa) - tidak perlu data orang tua")
+            orang_tua = "-"
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
+            with col2:
+                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+        else:
+            # Bukan UMUM - tampilkan data orang tua
+            orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
+            with col2:
+                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
         
     else:
         # ONLINE
@@ -383,13 +396,7 @@ with card():
         )
         
         if peserta == "Anak":
-            orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
-            col1, col2 = st.columns(2)
-            with col1:
-                wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
-            with col2:
-                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-            
+            # Tampilkan sekolah/kelas
             sekolah_kelas = st.selectbox(
                 "Sekolah & Kelas *",
                 ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
@@ -398,30 +405,53 @@ with card():
             is_umum = sekolah_kelas == "UMUM"
             is_diri_sendiri = False
             
+            # Tampilkan data orang tua (jika bukan UMUM)
+            if is_umum:
+                st.info("📌 Pendaftaran untuk umum (dewasa) - tidak perlu data orang tua")
+                orang_tua = "-"
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
+                with col2:
+                    alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+            else:
+                orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
+                with col2:
+                    alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+            
         else:
             # Diri sendiri
+            is_diri_sendiri = True
+            is_umum = True
             orang_tua = "-"
+            
+            # Untuk diri sendiri: status/pekerjaan (bukan sekolah/kelas)
+            sekolah_kelas = st.selectbox(
+                "Status / Pekerjaan *",
+                ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
+            )
+            
             col1, col2 = st.columns(2)
             with col1:
                 wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
             with col2:
                 alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-            
-            # Untuk diri sendiri: status/pekerjaan
-            sekolah_kelas = st.selectbox(
-                "Status / Pekerjaan *",
-                ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
-            )
-            is_umum = True
-            is_diri_sendiri = True
 
 # =========================================================
-# BAGIAN 2: DATA PENDUKUNG (HANYA UNTUK ANAK)
+# BAGIAN 2: DATA PENDUKUNG (HANYA UNTUK ANAK NON-UMUM)
 # =========================================================
 pekerjaan_ortu = None
 pekerjaan_ortu_lainnya = ""
 
-if not is_diri_sendiri:
+# Tampilkan data pendukung hanya jika:
+# 1. Bukan diri sendiri (Anak)
+# 2. Bukan UMUM (karena UMUM sudah tidak pakai orang tua)
+if not is_diri_sendiri and not is_umum:
     with card():
         st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-sub">Membantu kami menyesuaikan kelas</div>', unsafe_allow_html=True)
@@ -501,9 +531,11 @@ st.write("")
 # =========================================================
 # PROGRESS INDIKATOR
 # =========================================================
+# Tentukan field wajib berdasarkan kondisi
 required_fields = [nama, wa, alamat]
 
-if not is_diri_sendiri:
+# Tambahkan orang_tua hanya jika BUKAN UMUM dan BUKAN diri sendiri
+if not is_umum and not is_diri_sendiri:
     required_fields.append(orang_tua)
 
 # Validasi sekolah/kelas
@@ -544,14 +576,16 @@ if submitted:
     if not alamat:
         errors.append("Alamat wajib diisi")
     
-    if not is_diri_sendiri:
+    # Validasi orang tua hanya jika bukan UMUM dan bukan diri sendiri
+    if not is_umum and not is_diri_sendiri:
         if not orang_tua or orang_tua == "-":
             errors.append("Nama Orang Tua/Wali wajib diisi")
     
     if not sekolah_kelas or sekolah_kelas == "Pilih...":
         errors.append("Pilih Sekolah/Kelas atau Status/Pekerjaan terlebih dahulu")
     
-    if not is_diri_sendiri:
+    # Validasi pekerjaan orang tua (hanya untuk anak non-UMUM)
+    if not is_diri_sendiri and not is_umum:
         if pekerjaan_ortu == "Pilih..." or not pekerjaan_ortu:
             errors.append("Pilih pekerjaan orang tua terlebih dahulu")
         if pekerjaan_ortu == "Lainnya" and not pekerjaan_ortu_lainnya.strip():
@@ -569,6 +603,8 @@ if submitted:
         # Tentukan pekerjaan final
         if is_diri_sendiri:
             pekerjaan_final = sekolah_kelas  # Status = pekerjaan
+        elif is_umum:
+            pekerjaan_final = "UMUM"  # Untuk UMUM tanpa orang tua
         else:
             pekerjaan_final = pekerjaan_ortu_lainnya.strip() if pekerjaan_ortu == "Lainnya" else pekerjaan_ortu
 
@@ -584,7 +620,8 @@ if submitted:
             "pekerjaan_ortu": pekerjaan_final,
             "program_dipilih": ", ".join(programs),
             "jadwal_a": ", ".join(jadwal_a) if jadwal_a else "-",
-            "tipe_pendaftar": "Diri Sendiri" if is_diri_sendiri else "Anak"
+            "tipe_pendaftar": "Diri Sendiri" if is_diri_sendiri else "Anak",
+            "status_umum": "Ya" if is_umum else "Tidak"
         }
 
         # Cek duplikat
