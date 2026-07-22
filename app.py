@@ -47,19 +47,7 @@ def normalisasi_teks(s):
     return " ".join((s or "").strip().lower().split())
 
 def cek_data_existing(nama_lengkap, no_wa):
-    """Cek ke sheet apakah kombinasi Nama Siswa + No. WA ini sudah pernah terdaftar.
-    Menggunakan kombinasi (bukan No. WA saja) supaya kakak-adik yang memakai
-    nomor WA orang tua yang sama tetap bisa mendaftar masing-masing.
-
-    Pencocokan nama dibuat toleran: mengabaikan huruf besar/kecil dan spasi
-    berlebih, karena orang tua bisa mengetik nama sedikit berbeda saat submit ulang.
-
-    Catatan: sheet.best memfilter 1 kolom lewat URL path (bukan query param),
-    contoh: SHEET_URL/no_wa/081234567890 -- jadi kita filter di server berdasarkan
-    No. WA saja (exact match), lalu nama dibandingkan secara toleran di sisi kode.
-
-    Mengembalikan data lama (dict, sesuai apa adanya di sheet) jika ada, atau None jika belum ada.
-    """
+    """Cek ke sheet apakah kombinasi Nama Siswa + No. WA ini sudah pernah terdaftar."""
     try:
         url = f"{SHEET_URL}/no_wa/{urllib.parse.quote(str(no_wa), safe='')}"
         resp = requests.get(url, timeout=10)
@@ -72,16 +60,12 @@ def cek_data_existing(nama_lengkap, no_wa):
                 return row
         return None
     except Exception:
-        # Jika gagal cek (mis. koneksi), anggap tidak ada duplikat agar tidak menghalangi pendaftaran
         return None
 
 def simpan_data_baru(data_pendaftar):
     return requests.post(SHEET_URL, json=data_pendaftar, timeout=10)
 
 def update_data_lama(nama_lengkap, no_wa, data_pendaftar):
-    # Update berbasis gabungan 2 kolom -> pakai endpoint /search sesuai dokumentasi sheet.best
-    # Gunakan nilai nama & WA PERSIS seperti yang tersimpan di sheet (bukan input baru)
-    # agar filter update pasti cocok, walau penulisan huruf besar/kecil user berbeda.
     return requests.patch(
         f"{SHEET_URL}/search",
         params={"nama_lengkap": nama_lengkap, "no_wa": no_wa},
@@ -96,8 +80,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Fallback: st.container(border=True) hanya ada di Streamlit >= 1.28.
-# Jika versi lebih lama, gunakan container biasa agar tidak error.
 def card():
     try:
         return st.container(border=True)
@@ -109,16 +91,6 @@ def card():
 # =========================================================
 st.markdown("""
 <style>
-    /* =====================================================
-       PALET WARNA:
-       Biru tua   #0b3d91  (judul, aksen utama)
-       Biru       #1565c0  (aksen sekunder)
-       Hijau      #00796b / #2e7d32 (sukses, aksen kedua)
-       Putih      #ffffff  (kartu, teks di atas warna gelap)
-       Teks gelap #0f2436  (teks utama di atas putih)
-       ===================================================== */
-
-    /* ---------- Global ---------- */
     .stApp {
         background: linear-gradient(160deg, #e6f1fb 0%, #e5f6ee 100%);
     }
@@ -128,14 +100,10 @@ st.markdown("""
         padding-bottom: 3rem;
         max-width: 640px;
     }
-
-    /* Paksa semua teks default (markdown, label, dsb) jadi gelap & jelas */
     html, body, [class^="css"], .stMarkdown, .stMarkdown p,
     div[data-testid="stMarkdownContainer"] p {
         color: #0f2436 !important;
     }
-
-    /* ---------- Header ---------- */
     .hero {
         background: linear-gradient(135deg, #0b3d91 0%, #0d6efd 55%, #00897b 100%);
         padding: 34px 24px 30px 24px;
@@ -156,8 +124,6 @@ st.markdown("""
         padding: 8px;
         box-shadow: 0 4px 14px rgba(0,0,0,0.15);
     }
-
-    /* ---------- Poster banner (menggantikan hero jika ada) ---------- */
     .poster-banner {
         width: 100%;
         border-radius: 22px;
@@ -180,8 +146,6 @@ st.markdown("""
         line-height: 1.4;
         opacity: 0.95;
     }
-
-    /* ---------- Progress ---------- */
     .progress-wrap {
         background: #ffffff;
         border-radius: 14px;
@@ -198,8 +162,6 @@ st.markdown("""
     div[data-testid="stProgress"] div[role="progressbar"] > div {
         background: linear-gradient(90deg, #0d6efd, #00897b) !important;
     }
-
-    /* ---------- Section card ---------- */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: #ffffff !important;
         border-radius: 18px !important;
@@ -219,15 +181,11 @@ st.markdown("""
         margin-bottom: 14px;
     }
     .required { color: #d32f2f !important; font-weight: 700; }
-
-    /* ---------- Label input (nama field, dsb) ---------- */
     div[data-testid="stWidgetLabel"] p {
         color: #0f2436 !important;
         font-weight: 600 !important;
         font-size: 0.92rem !important;
     }
-
-    /* ---------- Text input & selectbox ---------- */
     .stTextInput input {
         border-radius: 12px !important;
         border: 1.5px solid #c3d9ea !important;
@@ -251,8 +209,6 @@ st.markdown("""
         color: #0f2436 !important;
         background-color: #ffffff !important;
     }
-
-    /* ---------- Program chips (checkbox look) ---------- */
     .stCheckbox {
         background: #f2f8fc;
         border-radius: 12px;
@@ -269,8 +225,6 @@ st.markdown("""
         font-weight: 600 !important;
     }
     .stCheckbox svg { color: #00897b !important; }
-
-    /* ---------- Alerts ---------- */
     .hint-box, .warn-box, .ok-box, .muted-box {
         padding: 10px 14px;
         border-radius: 10px;
@@ -299,8 +253,6 @@ st.markdown("""
         color: #37474f !important;
         font-weight: 500;
     }
-
-    /* ---------- Submit button ---------- */
     .stButton button {
         background: linear-gradient(135deg, #0b3d91, #00897b) !important;
         color: #ffffff !important;
@@ -318,8 +270,6 @@ st.markdown("""
         transform: translateY(-2px) !important;
         box-shadow: 0 12px 26px rgba(11,61,145,0.4) !important;
     }
-
-    /* ---------- Expander ringkasan ---------- */
     div[data-testid="stExpander"] {
         background: #ffffff !important;
         border-radius: 14px !important;
@@ -327,7 +277,6 @@ st.markdown("""
     }
     div[data-testid="stExpander"] summary p { color: #0b3d91 !important; font-weight: 700 !important; }
     div[data-testid="stExpander"] p, div[data-testid="stExpander"] li { color: #0f2436 !important; }
-
     .footer-note {
         text-align: center;
         padding: 26px 0 6px 0;
@@ -335,8 +284,6 @@ st.markdown("""
         font-size: 0.8rem;
         font-weight: 500;
     }
-    
-    /* ---------- Radio button styling ---------- */
     .stRadio > div {
         gap: 12px;
     }
@@ -363,7 +310,6 @@ st.markdown("""
 # HEADER
 # =========================================================
 if poster_data_uri:
-    # Poster menggantikan banner biru sepenuhnya
     st.markdown(f"""
     <img src="{poster_data_uri}" class="poster-banner" alt="poster">
     """, unsafe_allow_html=True)
@@ -377,7 +323,7 @@ else:
     <div class="hero">
         {header_icon_html}
         <h1>Pendaftaran Kursus</h1>
-        <p>📱 Isi data anaknya ya, Bu/Pak. Boleh pilih lebih dari 1 program.</p>
+        <p>📱 Isi data pendaftar. Boleh pilih lebih dari 1 program.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -395,58 +341,40 @@ with card():
         horizontal=True
     )
 
+is_offline = metode == "Offline (Tatap Muka)"
+
 # =========================================================
-# BAGIAN 1: DATA DIRI (ADAPTIF)
+# BAGIAN 1: DATA DIRI
 # =========================================================
 with card():
     st.markdown('<div class="section-title">👤 Data Diri</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Kolom bertanda <span class="required">*</span> wajib diisi</div>', unsafe_allow_html=True)
 
-    # Cek kondisi
-    is_offline = metode == "Offline (Tatap Muka)"
-    is_umum = False
-    is_diri_sendiri = False
-    
     nama = st.text_input("Nama Lengkap *", placeholder="Contoh: Ahmad Fauzi")
     nama_panggilan = st.text_input("Nama Panggilan (opsional)", placeholder="Contoh: Ahmad")
     
-    # Form adaptif berdasarkan mode
     if is_offline:
-        # Offline mode - cek apakah memilih UMUM
-        # Tampilkan pilihan status/pekerjaan dulu
-        status_pekerjaan = st.selectbox(
-            "Status / Pekerjaan *",
-            ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"],
-            key="status_offline"
-        )
-        is_umum = status_pekerjaan != "Pilih..."  # Semua status dianggap UMUM untuk offline
-        is_diri_sendiri = True  # Offline selalu untuk diri sendiri jika UMUM
+        # OFFLINE: selalu untuk anak dengan data orang tua
+        st.info("📌 Pendaftaran offline untuk siswa (anak)")
+        orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
         
-        if is_umum:
-            # UMUM - tidak perlu data orang tua
-            st.info("📌 Pendaftaran untuk umum (dewasa) - tidak perlu data orang tua")
-            orang_tua = "-"  # Tidak diperlukan
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
-            with col2:
-                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-            
-            # Simpan pilihan
-            sekolah_kelas = status_pekerjaan  # Status digunakan sebagai sekolah_kelas
-            pekerjaan_ortu = status_pekerjaan  # Pekerjaan sama dengan status
-        else:
-            # Belum memilih status
-            orang_tua = "-"
-            wa = ""
-            alamat = ""
-            sekolah_kelas = ""
-            pekerjaan_ortu = ""
-            st.warning("⚠️ Silakan pilih Status / Pekerjaan terlebih dahulu")
-            
+        col1, col2 = st.columns(2)
+        with col1:
+            wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
+        with col2:
+            alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+        
+        # Data kelas tetap ditampilkan
+        sekolah_kelas = st.selectbox(
+            "Sekolah & Kelas *",
+            ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
+        )
+        is_umum = sekolah_kelas == "UMUM"
+        is_diri_sendiri = False
+        
     else:
-        # Online mode
+        # ONLINE
         peserta = st.radio(
             "Pendaftaran untuk *",
             ["Anak", "Diri Sendiri"],
@@ -462,7 +390,6 @@ with card():
             with col2:
                 alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
             
-            # Pilih sekolah/kelas untuk anak
             sekolah_kelas = st.selectbox(
                 "Sekolah & Kelas *",
                 ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
@@ -471,79 +398,51 @@ with card():
             is_umum = sekolah_kelas == "UMUM"
             is_diri_sendiri = False
             
-            # Pekerjaan orang tua akan diisi di bagian selanjutnya
-            pekerjaan_ortu = None
-            
         else:
-            # Diri sendiri - tidak perlu data orang tua
-            is_diri_sendiri = True
-            orang_tua = "-"  # Tidak diperlukan
-            
+            # Diri sendiri
+            orang_tua = "-"
             col1, col2 = st.columns(2)
             with col1:
                 wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
             with col2:
                 alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
             
-            # Status dan pekerjaan digabung jadi satu pilihan
-            status_pekerjaan = st.selectbox(
+            # Untuk diri sendiri: status/pekerjaan
+            sekolah_kelas = st.selectbox(
                 "Status / Pekerjaan *",
                 ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
             )
-            sekolah_kelas = status_pekerjaan  # Status digunakan sebagai sekolah_kelas
-            pekerjaan_ortu = status_pekerjaan  # Pekerjaan sama dengan status
             is_umum = True
+            is_diri_sendiri = True
 
 # =========================================================
-# BAGIAN 2: DATA PENDUKUNG (LANJUTAN)
+# BAGIAN 2: DATA PENDUKUNG (HANYA UNTUK ANAK)
 # =========================================================
-# Hanya tampilkan bagian ini jika belum selesai di bagian sebelumnya
-if not is_offline and peserta == "Anak":
-    # Untuk online + anak, tampilkan data pendukung
+pekerjaan_ortu = None
+pekerjaan_ortu_lainnya = ""
+
+if not is_diri_sendiri:
     with card():
         st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-sub">Membantu kami menyesuaikan kelas</div>', unsafe_allow_html=True)
 
         col3, col4 = st.columns(2)
         with col3:
-            # Sekolah/kelas sudah dipilih di atas
-            st.markdown(f'<div class="muted-box">ℹ️ Sekolah/Kelas: {sekolah_kelas}</div>', unsafe_allow_html=True)
+            # Tampilkan sekolah/kelas yang sudah dipilih
+            if sekolah_kelas and sekolah_kelas != "Pilih...":
+                st.markdown(f'<div class="muted-box">ℹ️ Sekolah/Kelas: {sekolah_kelas}</div>', unsafe_allow_html=True)
         
         with col4:
-            # Pekerjaan orang tua
             pekerjaan_ortu = st.selectbox(
                 "Pekerjaan Orang Tua",
                 ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
             )
 
-        pekerjaan_ortu_lainnya = ""
         if pekerjaan_ortu == "Lainnya":
             pekerjaan_ortu_lainnya = st.text_input(
                 "Sebutkan pekerjaan orang tua *",
                 placeholder="Contoh: Tukang Ojek, Wiraswasta, dll."
             )
-        
-        # Untuk anak, gunakan status dari sekolah_kelas
-        status_pekerjaan = sekolah_kelas
-
-elif is_offline and not is_umum:
-    # Offline tapi belum pilih status
-    with card():
-        st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Silakan lengkapi data di bagian sebelumnya</div>', unsafe_allow_html=True)
-        st.warning("⚠️ Silakan pilih Status / Pekerjaan di bagian Data Diri")
-
-else:
-    # Untuk offline+UMUM atau online+diri sendiri, data sudah lengkap
-    # Tampilkan ringkasan
-    with card():
-        st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Ringkasan data</div>', unsafe_allow_html=True)
-        
-        if is_diri_sendiri:
-            st.markdown(f'<div class="muted-box">ℹ️ Status / Pekerjaan: {sekolah_kelas if sekolah_kelas and sekolah_kelas != "Pilih..." else "Belum dipilih"}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="muted-box">ℹ️ Sekolah/Kelas: {sekolah_kelas if sekolah_kelas and sekolah_kelas != "Pilih..." else "Belum dipilih"}</div>', unsafe_allow_html=True)
 
 # =========================================================
 # BAGIAN 3: PILIHAN PROGRAM
@@ -571,7 +470,7 @@ with card():
         st.markdown(f'<div class="ok-box">✅ {len(programs)} program dipilih</div>', unsafe_allow_html=True)
 
 # =========================================================
-# BAGIAN 4: JADWAL PROGRAM A (MUNCUL OTOMATIS)
+# BAGIAN 4: JADWAL MATH DROP-IN
 # =========================================================
 jadwal_a = []
 if cek_program_a:
@@ -600,19 +499,17 @@ else:
 st.write("")
 
 # =========================================================
-# PROGRESS INDIKATOR (opsional, membantu pengguna)
+# PROGRESS INDIKATOR
 # =========================================================
-# Tentukan field wajib berdasarkan mode
 required_fields = [nama, wa, alamat]
 
-# Hanya tambahkan orang_tua jika bukan diri sendiri
 if not is_diri_sendiri:
     required_fields.append(orang_tua)
 
-# Tambahkan status/pekerjaan jika sudah dipilih
+# Validasi sekolah/kelas
 if sekolah_kelas and sekolah_kelas != "Pilih...":
     filled = sum(1 for f in required_fields if str(f).strip())
-    filled += 1  # untuk status/pekerjaan
+    filled += 1
 else:
     filled = sum(1 for f in required_fields if str(f).strip())
 
@@ -630,7 +527,7 @@ st.markdown(f"""
 st.progress(pct / 100 if pct > 0 else 0)
 
 # =========================================================
-# TOMBOL SUBMIT & SIMPAN DATA
+# TOMBOL SUBMIT
 # =========================================================
 if "duplikat_data" not in st.session_state:
     st.session_state.duplikat_data = None
@@ -638,7 +535,6 @@ if "duplikat_data" not in st.session_state:
 submitted = st.button("✅ Daftar Sekarang", type="primary", use_container_width=True)
 
 if submitted:
-    # Validasi berdasarkan mode
     errors = []
     
     if not nama:
@@ -648,17 +544,14 @@ if submitted:
     if not alamat:
         errors.append("Alamat wajib diisi")
     
-    # Validasi orang tua (kecuali diri sendiri)
     if not is_diri_sendiri:
         if not orang_tua or orang_tua == "-":
             errors.append("Nama Orang Tua/Wali wajib diisi")
     
-    # Validasi status/pekerjaan
     if not sekolah_kelas or sekolah_kelas == "Pilih...":
-        errors.append("Pilih Status / Pekerjaan terlebih dahulu")
+        errors.append("Pilih Sekolah/Kelas atau Status/Pekerjaan terlebih dahulu")
     
-    # Validasi pekerjaan untuk anak
-    if not is_diri_sendiri and peserta == "Anak":
+    if not is_diri_sendiri:
         if pekerjaan_ortu == "Pilih..." or not pekerjaan_ortu:
             errors.append("Pilih pekerjaan orang tua terlebih dahulu")
         if pekerjaan_ortu == "Lainnya" and not pekerjaan_ortu_lainnya.strip():
@@ -675,10 +568,8 @@ if submitted:
     else:
         # Tentukan pekerjaan final
         if is_diri_sendiri:
-            # Untuk diri sendiri, status = pekerjaan
-            pekerjaan_final = sekolah_kelas
+            pekerjaan_final = sekolah_kelas  # Status = pekerjaan
         else:
-            # Untuk anak, gunakan pekerjaan orang tua
             pekerjaan_final = pekerjaan_ortu_lainnya.strip() if pekerjaan_ortu == "Lainnya" else pekerjaan_ortu
 
         data_pendaftar = {
@@ -696,11 +587,10 @@ if submitted:
             "tipe_pendaftar": "Diri Sendiri" if is_diri_sendiri else "Anak"
         }
 
-        # Cek apakah kombinasi Nama + No. WhatsApp ini sudah pernah terdaftar
+        # Cek duplikat
         data_lama = cek_data_existing(nama, wa)
 
         if data_lama is None:
-            # Belum pernah daftar -> simpan sebagai data baru
             try:
                 response = simpan_data_baru(data_pendaftar)
                 if response.status_code in [200, 201]:
@@ -714,7 +604,6 @@ if submitted:
                 st.info("Data tidak tersimpan, berikut datanya (screenshot/catat):")
                 st.json(data_pendaftar)
         else:
-            # Nama + No. WA sudah pernah terdaftar -> simpan sementara, minta konfirmasi update
             st.session_state.duplikat_data = {
                 "data_baru": data_pendaftar,
                 "nama_lama": data_lama.get("nama_lengkap", "-"),
@@ -722,7 +611,7 @@ if submitted:
                 "no_wa": data_lama.get("no_wa", wa)
             }
 
-# ---------- Konfirmasi jika ditemukan data duplikat ----------
+# ---------- Konfirmasi duplikat ----------
 if st.session_state.duplikat_data:
     dup = st.session_state.duplikat_data
     with card():
