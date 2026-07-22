@@ -402,26 +402,51 @@ with card():
     st.markdown('<div class="section-title">👤 Data Diri</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Kolom bertanda <span class="required">*</span> wajib diisi</div>', unsafe_allow_html=True)
 
-    # Cek apakah offline dan memilih UMUM
+    # Cek kondisi
     is_offline = metode == "Offline (Tatap Muka)"
     is_umum = False
     
     nama = st.text_input("Nama Lengkap *", placeholder="Contoh: Ahmad Fauzi")
     nama_panggilan = st.text_input("Nama Panggilan (opsional)", placeholder="Contoh: Ahmad")
     
-    # Form adaptif untuk offline/online
+    # Form adaptif berdasarkan mode
     if is_offline:
-        # Offline mode - tampilkan form untuk anak (dengan orang tua)
-        orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
+        # Offline mode - cek apakah memilih UMUM
+        # Tampilkan pilihan sekolah/kelas dulu untuk menentukan
+        sekolah_kelas_temp = st.selectbox(
+            "Sekolah & Kelas *",
+            ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
+             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"],
+            key="sekolah_temp"
+        )
+        is_umum = sekolah_kelas_temp == "UMUM"
         
-        col1, col2 = st.columns(2)
-        with col1:
-            wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
-        with col2:
-            alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+        if is_umum:
+            # UMUM - tidak perlu data orang tua
+            st.info("📌 Pendaftaran untuk umum (dewasa) - tidak perlu data orang tua")
+            orang_tua = "-"  # Tidak diperlukan
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
+            with col2:
+                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+            
+            # Simpan pilihan untuk digunakan di bagian selanjutnya
+            sekolah_kelas = sekolah_kelas_temp
+        else:
+            # Bukan UMUM - tetap pakai data orang tua
+            orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
+            with col2:
+                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+            
+            sekolah_kelas = sekolah_kelas_temp
     else:
-        # Online mode - tampilkan form untuk peserta (bisa anak atau dewasa)
-        # Pertanyaan: Apakah ini untuk anak atau untuk diri sendiri?
+        # Online mode
         peserta = st.radio(
             "Pendaftaran untuk *",
             ["Anak", "Diri Sendiri"],
@@ -436,6 +461,14 @@ with card():
                 wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
             with col2:
                 alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+            
+            # Pilih sekolah/kelas
+            sekolah_kelas = st.selectbox(
+                "Sekolah & Kelas *",
+                ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
+                 "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
+            )
+            is_umum = sekolah_kelas == "UMUM"
         else:
             # Diri sendiri - tidak perlu data orang tua
             orang_tua = "-"  # Tidak diperlukan
@@ -444,6 +477,13 @@ with card():
                 wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
             with col2:
                 alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
+            
+            # Pilihan status untuk dewasa
+            sekolah_kelas = st.selectbox(
+                "Status *",
+                ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
+            )
+            is_umum = True  # Untuk dewasa, selalu dianggap "UMUM"
 
 # =========================================================
 # BAGIAN 2: DATA PENDUKUNG
@@ -454,39 +494,36 @@ with card():
 
     col3, col4 = st.columns(2)
     with col3:
-        if is_offline:
-            # Offline: pilihan sekolah/kelas untuk anak
-            sekolah_kelas = st.selectbox(
-                "Sekolah & Kelas *",
-                ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-                 "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
-            )
-            is_umum = sekolah_kelas == "UMUM"
+        # Tampilkan kembali pilihan sekolah/kelas jika offline dan belum dipilih
+        if is_offline and 'sekolah_kelas_temp' in locals():
+            # Sudah dipilih di atas
+            pass
         else:
-            # Online: pilihan status peserta
-            if peserta == "Anak":
-                sekolah_kelas = st.selectbox(
-                    "Sekolah & Kelas *",
-                    ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-                     "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
-                )
-                is_umum = sekolah_kelas == "UMUM"
-            else:
-                # Diri sendiri - pilihan status
-                sekolah_kelas = st.selectbox(
-                    "Status *",
-                    ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
-                )
-                is_umum = True  # Untuk dewasa, selalu dianggap "UMUM"
+            # Untuk online, sudah dipilih di atas
+            pass
+        
+        # Untuk offline + UMUM, atau online + diri sendiri, status sudah dipilih
+        if is_offline and is_umum:
+            # Status sudah dipilih (UMUM) - tampilkan sebagai info
+            st.markdown(f'<div class="muted-box">ℹ️ Status: {sekolah_kelas}</div>', unsafe_allow_html=True)
+        elif not is_offline and peserta == "Diri Sendiri":
+            st.markdown(f'<div class="muted-box">ℹ️ Status: {sekolah_kelas}</div>', unsafe_allow_html=True)
     
     with col4:
         # Pekerjaan adaptif
         if is_offline:
-            # Offline: pekerjaan orang tua
-            pekerjaan_ortu = st.selectbox(
-                "Pekerjaan Orang Tua",
-                ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
-            )
+            if is_umum:
+                # Offline + UMUM - pekerjaan sendiri
+                pekerjaan_ortu = st.selectbox(
+                    "Pekerjaan *",
+                    ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
+                )
+            else:
+                # Offline + anak - pekerjaan orang tua
+                pekerjaan_ortu = st.selectbox(
+                    "Pekerjaan Orang Tua",
+                    ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
+                )
         else:
             if peserta == "Anak":
                 # Online untuk anak: pekerjaan orang tua
@@ -503,7 +540,15 @@ with card():
 
     pekerjaan_ortu_lainnya = ""
     if pekerjaan_ortu == "Lainnya":
-        label = "Sebutkan pekerjaan *" if not is_offline and peserta != "Anak" else "Sebutkan pekerjaan orang tua *"
+        if is_offline and is_umum:
+            label = "Sebutkan pekerjaan *"
+        elif is_offline and not is_umum:
+            label = "Sebutkan pekerjaan orang tua *"
+        elif not is_offline and peserta == "Anak":
+            label = "Sebutkan pekerjaan orang tua *"
+        else:
+            label = "Sebutkan pekerjaan *"
+        
         pekerjaan_ortu_lainnya = st.text_input(
             label,
             placeholder="Contoh: Tukang Ojek, Wiraswasta, dll."
@@ -521,6 +566,7 @@ with card():
     cek_program_c = st.checkbox("📖 Program ENGLISH FOR TEENS")
     cek_program_d = st.checkbox("✏️ Program PREMIUM MATH")
     cek_program_e = st.checkbox("📚 Program CALISTUNG")
+    cek_program_f = st.checkbox("🌍 Program GENERAL ENGLISH")  # Program baru
 
     programs = []
     if cek_program_a: programs.append("Program MATH DROP-IN")
@@ -528,6 +574,7 @@ with card():
     if cek_program_c: programs.append("Program ENGLISH FOR TEENS")
     if cek_program_d: programs.append("Program PREMIUM MATH")
     if cek_program_e: programs.append("Program CALISTUNG")
+    if cek_program_f: programs.append("Program GENERAL ENGLISH")
 
     if programs:
         st.markdown(f'<div class="ok-box">✅ {len(programs)} program dipilih</div>', unsafe_allow_html=True)
@@ -564,27 +611,35 @@ st.write("")
 # =========================================================
 # PROGRESS INDIKATOR (opsional, membantu pengguna)
 # =========================================================
+# Tentukan field wajib berdasarkan mode
 required_fields = [nama, wa, alamat]
-if not is_offline and peserta == "Diri Sendiri":
-    # Diri sendiri: orang_tua tidak wajib
-    required_fields = [nama, wa, alamat]
+if is_offline and is_umum:
+    # Offline + UMUM: tidak perlu orang tua
+    pass
+elif is_offline and not is_umum:
+    # Offline + anak: butuh orang tua
+    required_fields.append(orang_tua)
+elif not is_offline and peserta == "Anak":
+    # Online + anak: butuh orang tua
+    required_fields.append(orang_tua)
 else:
-    required_fields = [nama, orang_tua, wa, alamat]
+    # Online + diri sendiri: tidak perlu orang tua
+    pass
 
-filled = sum(1 for f in required_fields if f.strip())
-if sekolah_kelas != "Pilih...":
+filled = sum(1 for f in required_fields if str(f).strip())
+if sekolah_kelas != "Pilih..." and sekolah_kelas != "Pilih...":
     filled += 1
 if programs:
     filled += 1
 total_steps = len(required_fields) + 2
-pct = int((filled / total_steps) * 100)
+pct = int((filled / total_steps) * 100) if total_steps > 0 else 0
 
 st.markdown(f"""
 <div class="progress-wrap">
     <div class="progress-label"><span>Kelengkapan formulir</span><span>{pct}%</span></div>
 </div>
 """, unsafe_allow_html=True)
-st.progress(pct / 100)
+st.progress(pct / 100 if pct > 0 else 0)
 
 # =========================================================
 # TOMBOL SUBMIT & SIMPAN DATA
@@ -605,12 +660,18 @@ if submitted:
     if not alamat:
         errors.append("Alamat wajib diisi")
     
-    # Validasi orang tua (kecuali online untuk diri sendiri)
-    if is_offline or (not is_offline and peserta == "Anak"):
-        if not orang_tua:
+    # Validasi orang tua (kecuali offline+UMUM atau online+diri sendiri)
+    if is_offline and is_umum:
+        # Tidak perlu orang tua
+        pass
+    elif is_offline and not is_umum:
+        if not orang_tua or orang_tua == "-":
+            errors.append("Nama Orang Tua/Wali wajib diisi")
+    elif not is_offline and peserta == "Anak":
+        if not orang_tua or orang_tua == "-":
             errors.append("Nama Orang Tua/Wali wajib diisi")
     
-    if sekolah_kelas == "Pilih...":
+    if sekolah_kelas == "Pilih..." or not sekolah_kelas:
         errors.append("Pilih status/sekolah terlebih dahulu")
     if pekerjaan_ortu == "Pilih...":
         errors.append("Pilih pekerjaan terlebih dahulu")
