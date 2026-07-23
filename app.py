@@ -72,7 +72,7 @@ def cek_data_existing(nama_lengkap, no_wa):
     if not supabase:
         return None
     try:
-        response = supabase.table('pendaftaran')\
+        response = supabase.table('form_kursus_mec')\
             .select('*')\
             .eq('no_wa', str(no_wa))\
             .execute()
@@ -93,7 +93,7 @@ def simpan_data_baru(data_pendaftar):
         # Tambahkan created_at dengan format ISO
         data_pendaftar['created_at'] = datetime.now().isoformat()
         
-        response = supabase.table('pendaftaran')\
+        response = supabase.table('form_kursus_mec')\
             .insert(data_pendaftar)\
             .execute()
         if response.data:
@@ -107,7 +107,7 @@ def update_data_lama(nama_lengkap, no_wa, data_pendaftar):
     if not supabase:
         return None, "Supabase tidak terkoneksi"
     try:
-        response = supabase.table('pendaftaran')\
+        response = supabase.table('form_kursus_mec')\
             .update(data_pendaftar)\
             .eq('no_wa', str(no_wa))\
             .eq('nama_lengkap', nama_lengkap)\
