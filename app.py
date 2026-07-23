@@ -1,22 +1,28 @@
 import streamlit as st
-import requests
 from datetime import datetime
 import base64
 import os
-import urllib.parse
+from supabase import create_client, Client
 
 # =========================================================
-# KONFIGURASI
+# KONFIGURASI SUPABASE (DARI SECRETS)
 # =========================================================
-SHEET_URL = "https://api.sheetbest.com/sheets/72f98a03-5ba2-434d-b486-b66320253153"
+# Ambil dari secrets.toml (Streamlit Cloud) atau environment variables
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except:
+    # Fallback untuk development lokal (gunakan .env)
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# Taruh file logo di folder yang sama dengan script ini, lalu ganti nama filenya di sini.
-# Kosongkan / biarkan file tidak ada jika belum punya logo -> otomatis pakai emoji 🏫
+# =========================================================
+# KONFIGURASI LAINNYA
+# =========================================================
 LOGO_PATH = "logo.png"
-
-# Taruh file poster/banner di folder yang sama, lalu ganti nama filenya di sini.
-# Jika file ini ada, poster akan menggantikan kotak banner biru gradient.
-# Jika tidak ada, banner biru default tetap dipakai.
 POSTER_PATH = "poster.png"
 
 def get_logo_base64(path):
@@ -38,41 +44,93 @@ BULAN_ID = [
 ]
 
 def format_tanggal_indonesia(dt):
-    """Format tanggal jadi teks 'DD Bulan YYYY HH:MM:SS' agar Google Sheets
-    tidak otomatis mengonversinya jadi tanggal/angka (yang sering bikin berantakan)."""
     return f"{dt.day:02d} {BULAN_ID[dt.month - 1]} {dt.year} {dt.strftime('%H:%M:%S')}"
 
 def normalisasi_teks(s):
-    """Bersihkan teks untuk perbandingan: hilangkan spasi berlebih & abaikan huruf besar/kecil."""
     return " ".join((s or "").strip().lower().split())
 
-def cek_data_existing(nama_lengkap, no_wa):
-    """Cek ke sheet apakah kombinasi Nama Siswa + No. WA ini sudah pernah terdaftar."""
+# =========================================================
+# FUNGSI SUPABASE
+# =========================================================
+@st.cache_resource
+def init_supabase():
+    """Inisialisasi koneksi Supabase"""
     try:
-        url = f"{SHEET_URL}/no_wa/{urllib.parse.quote(str(no_wa), safe='')}"
-        resp = requests.get(url, timeout=10)
-        if resp.status_code != 200:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            st.error("❌ SUPABASE_URL atau SUPABASE_KEY tidak ditemukan!")
             return None
-        rows = resp.json()
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        return supabase
+    except Exception as e:
+        st.error(f"❌ Gagal konek ke Supabase: {e}")
+        return None
+
+supabase = init_supabase()
+
+def cek_data_existing(nama_lengkap, no_wa):
+    """Cek ke Supabase apakah kombinasi Nama + No. WA sudah pernah terdaftar."""
+    if not supabase:
+        return None
+    
+    try:
+        response = supabase.table('pendaftaran')\
+            .select('*')\
+            .eq('no_wa', str(no_wa))\
+            .execute()
+        
+        if not response.data:
+            return None
+        
         target_nama = normalisasi_teks(nama_lengkap)
-        for row in rows:
-            if normalisasi_teks(row.get("nama_lengkap", "")) == target_nama:
+        for row in response.data:
+            if normalisasi_teks(row.get('nama_lengkap', '')) == target_nama:
                 return row
         return None
-    except Exception:
+    except Exception as e:
+        st.warning(f"⚠️ Gagal cek data: {e}")
         return None
 
 def simpan_data_baru(data_pendaftar):
-    return requests.post(SHEET_URL, json=data_pendaftar, timeout=10)
+    """Simpan data baru ke Supabase"""
+    if not supabase:
+        return None, "Supabase tidak terkoneksi"
+    
+    try:
+        data_pendaftar['created_at'] = datetime.now().isoformat()
+        
+        response = supabase.table('pendaftaran')\
+            .insert(data_pendaftar)\
+            .execute()
+        
+        if response.data:
+            return response, None
+        else:
+            return None, "Gagal menyimpan data"
+    except Exception as e:
+        return None, str(e)
 
 def update_data_lama(nama_lengkap, no_wa, data_pendaftar):
-    return requests.patch(
-        f"{SHEET_URL}/search",
-        params={"nama_lengkap": nama_lengkap, "no_wa": no_wa},
-        json=data_pendaftar,
-        timeout=10
-    )
+    """Update data lama di Supabase"""
+    if not supabase:
+        return None, "Supabase tidak terkoneksi"
+    
+    try:
+        response = supabase.table('pendaftaran')\
+            .update(data_pendaftar)\
+            .eq('no_wa', str(no_wa))\
+            .eq('nama_lengkap', nama_lengkap)\
+            .execute()
+        
+        if response.data:
+            return response, None
+        else:
+            return None, "Gagal update data"
+    except Exception as e:
+        return None, str(e)
 
+# =========================================================
+# STREAMLIT CONFIG
+# =========================================================
 st.set_page_config(
     page_title="Pendaftaran Kursus",
     page_icon="🏫",
@@ -87,7 +145,7 @@ def card():
         return st.container()
 
 # =========================================================
-# CSS
+# CSS (SAMA SEPERTI SEBELUMNYA)
 # =========================================================
 st.markdown("""
 <style>
@@ -328,365 +386,15 @@ else:
     """, unsafe_allow_html=True)
 
 # =========================================================
-# PILIHAN ONLINE/OFFLINE
+# CEK KONEKSI SUPABASE
 # =========================================================
-with card():
-    st.markdown('<div class="section-title">🌐 Metode Pembelajaran</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Pilih metode pembelajaran yang diinginkan</div>', unsafe_allow_html=True)
-    
-    metode = st.radio(
-        "Pilih metode pembelajaran *",
-        ["Online (Via Zoom/Google Meet)", "Offline (Tatap Muka)"],
-        index=0,
-        horizontal=True
-    )
-
-is_offline = metode == "Offline (Tatap Muka)"
-
-# =========================================================
-# BAGIAN 1: DATA DIRI
-# =========================================================
-with card():
-    st.markdown('<div class="section-title">👤 Data Diri</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Kolom bertanda <span class="required">*</span> wajib diisi</div>', unsafe_allow_html=True)
-
-    nama = st.text_input("Nama Lengkap *", placeholder="Contoh: Ahmad Fauzi")
-    nama_panggilan = st.text_input("Nama Panggilan (opsional)", placeholder="Contoh: Ahmad")
-    
-    # =========================================================
-    # SEKOLAH & KELAS (DITARUH SETELAH NAMA PANGGILAN)
-    # =========================================================
-    if is_offline:
-        # OFFLINE: pilihan sekolah/kelas
-        sekolah_kelas = st.selectbox(
-            "Sekolah & Kelas *",
-            ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-             "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
-        )
-        is_umum = sekolah_kelas == "UMUM"
-        is_diri_sendiri = False
-        
-        # TAMPILKAN DATA ORANG TUA (jika bukan UMUM)
-        if is_umum:
-            st.info("📌 Pendaftaran untuk umum (dewasa) - tidak perlu data orang tua")
-            orang_tua = "-"
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
-            with col2:
-                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-        else:
-            # Bukan UMUM - tampilkan data orang tua
-            orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
-            with col2:
-                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-        
-    else:
-        # ONLINE
-        peserta = st.radio(
-            "Pendaftaran untuk *",
-            ["Anak", "Diri Sendiri"],
-            index=0,
-            horizontal=True
-        )
-        
-        if peserta == "Anak":
-            # Tampilkan sekolah/kelas
-            sekolah_kelas = st.selectbox(
-                "Sekolah & Kelas *",
-                ["Pilih...", "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
-                 "SMP Kelas 1", "SMP Kelas 2", "SMP Kelas 3", "SMA/SMK", "UMUM"]
-            )
-            is_umum = sekolah_kelas == "UMUM"
-            is_diri_sendiri = False
-            
-            # Tampilkan data orang tua (jika bukan UMUM)
-            if is_umum:
-                st.info("📌 Pendaftaran untuk umum (dewasa) - tidak perlu data orang tua")
-                orang_tua = "-"
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
-                with col2:
-                    alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-            else:
-                orang_tua = st.text_input("Nama Orang Tua / Wali *", placeholder="Contoh: Bapak Slamet")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    wa = st.text_input("No. WhatsApp Orang Tua *", placeholder="81234567890")
-                with col2:
-                    alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-            
-        else:
-            # Diri sendiri
-            is_diri_sendiri = True
-            is_umum = True
-            orang_tua = "-"
-            
-            # Untuk diri sendiri: status/pekerjaan (bukan sekolah/kelas)
-            sekolah_kelas = st.selectbox(
-                "Status / Pekerjaan *",
-                ["Pilih...", "Pelajar/Mahasiswa", "Karyawan", "Wiraswasta", "Ibu Rumah Tangga", "Lainnya"]
-            )
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                wa = st.text_input("No. WhatsApp *", placeholder="81234567890")
-            with col2:
-                alamat = st.text_input("Alamat (RT / Dusun) *", placeholder="Contoh: RT 02, Krajan")
-
-# =========================================================
-# BAGIAN 2: DATA PENDUKUNG (HANYA UNTUK ANAK NON-UMUM)
-# =========================================================
-pekerjaan_ortu = None
-pekerjaan_ortu_lainnya = ""
-
-# Tampilkan data pendukung hanya jika:
-# 1. Bukan diri sendiri (Anak)
-# 2. Bukan UMUM (karena UMUM sudah tidak pakai orang tua)
-if not is_diri_sendiri and not is_umum:
-    with card():
-        st.markdown('<div class="section-title">📚 Data Pendukung</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Membantu kami menyesuaikan kelas</div>', unsafe_allow_html=True)
-
-        col3, col4 = st.columns(2)
-        with col3:
-            # Tampilkan sekolah/kelas yang sudah dipilih
-            if sekolah_kelas and sekolah_kelas != "Pilih...":
-                st.markdown(f'<div class="muted-box">ℹ️ Sekolah/Kelas: {sekolah_kelas}</div>', unsafe_allow_html=True)
-        
-        with col4:
-            pekerjaan_ortu = st.selectbox(
-                "Pekerjaan Orang Tua",
-                ["Pilih...", "Petani/Berkebun", "Buruh Tani", "Pedagang/Jualan", "Karyawan/PNS", "Ibu Rumah Tangga", "Lainnya"]
-            )
-
-        if pekerjaan_ortu == "Lainnya":
-            pekerjaan_ortu_lainnya = st.text_input(
-                "Sebutkan pekerjaan orang tua *",
-                placeholder="Contoh: Tukang Ojek, Wiraswasta, dll."
-            )
-
-# =========================================================
-# BAGIAN 3: PILIHAN PROGRAM
-# =========================================================
-with card():
-    st.markdown('<div class="section-title">🎯 Pilih Program Kursus</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Centang semua program yang ingin diikuti</div>', unsafe_allow_html=True)
-
-    cek_program_a = st.checkbox("💻 Program MATH DROP-IN")
-    cek_program_b = st.checkbox("🎨 Program ENGLISH FOR KIDS")
-    cek_program_c = st.checkbox("📖 Program ENGLISH FOR TEENS")
-    cek_program_d = st.checkbox("✏️ Program PREMIUM MATH")
-    cek_program_e = st.checkbox("📚 Program CALISTUNG")
-    cek_program_f = st.checkbox("🌍 Program GENERAL ENGLISH")
-
-    programs = []
-    if cek_program_a: programs.append("Program MATH DROP-IN")
-    if cek_program_b: programs.append("Program ENGLISH FOR KIDS")
-    if cek_program_c: programs.append("Program ENGLISH FOR TEENS")
-    if cek_program_d: programs.append("Program PREMIUM MATH")
-    if cek_program_e: programs.append("Program CALISTUNG")
-    if cek_program_f: programs.append("Program GENERAL ENGLISH")
-
-    if programs:
-        st.markdown(f'<div class="ok-box">✅ {len(programs)} program dipilih</div>', unsafe_allow_html=True)
-
-# =========================================================
-# BAGIAN 4: JADWAL MATH DROP-IN
-# =========================================================
-jadwal_a = []
-if cek_program_a:
-    with card():
-        st.markdown('<div class="section-title">📅 Jadwal MATH DROP-IN</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Centang jadwal yang diinginkan (boleh lebih dari 1)</div>', unsafe_allow_html=True)
-
-        sesi_list = [
-            ("🕐 Sesi 1 (Senin, 18.00–20.00)", "Sesi 1 (Senin, 18.00 - 20.00)"),
-            ("🕑 Sesi 2 (Selasa, 18.00–20.00)", "Sesi 2 (Selasa, 18.00 - 20.00)"),
-            ("🕒 Sesi 3 (Rabu, 18.00–20.00)", "Sesi 3 (Rabu, 18.00 - 20.00)"),
-            ("🕓 Sesi 4 (Kamis, 18.00–20.00)", "Sesi 4 (Kamis, 18.00 - 20.00)"),
-            ("🕔 Sesi 5 (Jumat, 18.00–20.00)", "Sesi 5 (Jumat, 18.00 - 20.00)"),
-        ]
-        for label, value in sesi_list:
-            if st.checkbox(label):
-                jadwal_a.append(value)
-
-        if len(jadwal_a) == 0:
-            st.markdown('<div class="warn-box">⚠️ Belum ada jadwal dipilih. Centang minimal 1.</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="ok-box">✅ {len(jadwal_a)} jadwal dipilih</div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="muted-box">ℹ️ Bagian jadwal akan muncul otomatis jika Anda memilih Program MATH DROP-IN.</div>', unsafe_allow_html=True)
-
-st.write("")
-
-# =========================================================
-# PROGRESS INDIKATOR
-# =========================================================
-# Tentukan field wajib berdasarkan kondisi
-required_fields = [nama, wa, alamat]
-
-# Tambahkan orang_tua hanya jika BUKAN UMUM dan BUKAN diri sendiri
-if not is_umum and not is_diri_sendiri:
-    required_fields.append(orang_tua)
-
-# Validasi sekolah/kelas
-if sekolah_kelas and sekolah_kelas != "Pilih...":
-    filled = sum(1 for f in required_fields if str(f).strip())
-    filled += 1
-else:
-    filled = sum(1 for f in required_fields if str(f).strip())
-
-if programs:
-    filled += 1
-
-total_steps = len(required_fields) + 2
-pct = int((filled / total_steps) * 100) if total_steps > 0 else 0
-
-st.markdown(f"""
-<div class="progress-wrap">
-    <div class="progress-label"><span>Kelengkapan formulir</span><span>{pct}%</span></div>
-</div>
-""", unsafe_allow_html=True)
-st.progress(pct / 100 if pct > 0 else 0)
-
-# =========================================================
-# TOMBOL SUBMIT
-# =========================================================
-if "duplikat_data" not in st.session_state:
-    st.session_state.duplikat_data = None
-
-submitted = st.button("✅ Daftar Sekarang", type="primary", use_container_width=True)
-
-if submitted:
-    errors = []
-    
-    if not nama:
-        errors.append("Nama Lengkap wajib diisi")
-    if not wa:
-        errors.append("Nomor WhatsApp wajib diisi")
-    if not alamat:
-        errors.append("Alamat wajib diisi")
-    
-    # Validasi orang tua hanya jika bukan UMUM dan bukan diri sendiri
-    if not is_umum and not is_diri_sendiri:
-        if not orang_tua or orang_tua == "-":
-            errors.append("Nama Orang Tua/Wali wajib diisi")
-    
-    if not sekolah_kelas or sekolah_kelas == "Pilih...":
-        errors.append("Pilih Sekolah/Kelas atau Status/Pekerjaan terlebih dahulu")
-    
-    # Validasi pekerjaan orang tua (hanya untuk anak non-UMUM)
-    if not is_diri_sendiri and not is_umum:
-        if pekerjaan_ortu == "Pilih..." or not pekerjaan_ortu:
-            errors.append("Pilih pekerjaan orang tua terlebih dahulu")
-        if pekerjaan_ortu == "Lainnya" and not pekerjaan_ortu_lainnya.strip():
-            errors.append("Mohon isi kolom pekerjaan orang tua lainnya")
-    
-    if len(programs) == 0:
-        errors.append("Pilih minimal 1 program kursus")
-    if cek_program_a and len(jadwal_a) == 0:
-        errors.append("Anda memilih Program MATH DROP-IN, tapi belum memilih jadwal. Centang minimal 1.")
-    
-    if errors:
-        for error in errors:
-            st.error(f"❌ {error}")
-    else:
-        # Tentukan pekerjaan final
-        if is_diri_sendiri:
-            pekerjaan_final = sekolah_kelas  # Status = pekerjaan
-        elif is_umum:
-            pekerjaan_final = "UMUM"  # Untuk UMUM tanpa orang tua
-        else:
-            pekerjaan_final = pekerjaan_ortu_lainnya.strip() if pekerjaan_ortu == "Lainnya" else pekerjaan_ortu
-
-        data_pendaftar = {
-            "tanggal_daftar": format_tanggal_indonesia(datetime.now()),
-            "metode": metode,
-            "nama_lengkap": nama,
-            "nama_panggilan": nama_panggilan if nama_panggilan else "-",
-            "orang_tua": orang_tua if orang_tua else "-",
-            "no_wa": wa,
-            "alamat": alamat,
-            "sekolah_kelas": sekolah_kelas,
-            "pekerjaan_ortu": pekerjaan_final,
-            "program_dipilih": ", ".join(programs),
-            "jadwal_a": ", ".join(jadwal_a) if jadwal_a else "-",
-            "tipe_pendaftar": "Diri Sendiri" if is_diri_sendiri else "Anak",
-            "status_umum": "Ya" if is_umum else "Tidak"
-        }
-
-        # Cek duplikat
-        data_lama = cek_data_existing(nama, wa)
-
-        if data_lama is None:
-            try:
-                response = simpan_data_baru(data_pendaftar)
-                if response.status_code in [200, 201]:
-                    st.success(f"✅ Pendaftaran **{nama}** berhasil! Data sudah tersimpan.")
-                    st.balloons()
-                else:
-                    st.error(f"❌ Gagal simpan ke server. Status: {response.status_code}")
-                    st.json(data_pendaftar)
-            except Exception as e:
-                st.error(f"❌ Error koneksi: {e}")
-                st.info("Data tidak tersimpan, berikut datanya (screenshot/catat):")
-                st.json(data_pendaftar)
-        else:
-            st.session_state.duplikat_data = {
-                "data_baru": data_pendaftar,
-                "nama_lama": data_lama.get("nama_lengkap", "-"),
-                "nama_lengkap": data_lama.get("nama_lengkap", nama),
-                "no_wa": data_lama.get("no_wa", wa)
-            }
-
-# ---------- Konfirmasi duplikat ----------
-if st.session_state.duplikat_data:
-    dup = st.session_state.duplikat_data
-    with card():
-        st.markdown(
-            f'<div class="warn-box">⚠️ Pendaftar <b>{dup["nama_lama"]}</b> dengan nomor WhatsApp ini sudah pernah '
-            f'terdaftar sebelumnya. Data lama akan diganti (replace) jika Anda memilih "Update Data".</div>',
-            unsafe_allow_html=True
-        )
-        colA, colB = st.columns(2)
-        with colA:
-            konfirmasi_update = st.button("🔄 Ya, Update Data", use_container_width=True)
-        with colB:
-            batal_update = st.button("✖️ Batal", use_container_width=True)
-
-        if konfirmasi_update:
-            try:
-                response = update_data_lama(dup["nama_lengkap"], dup["no_wa"], dup["data_baru"])
-                if response.status_code in [200, 201]:
-                    st.success(f"✅ Data **{dup['data_baru']['nama_lengkap']}** berhasil diperbarui.")
-                    st.balloons()
-                else:
-                    st.error(f"❌ Gagal update data. Status: {response.status_code}")
-                    st.json(dup["data_baru"])
-            except Exception as e:
-                st.error(f"❌ Error koneksi: {e}")
-                st.json(dup["data_baru"])
-            st.session_state.duplikat_data = None
-
-        if batal_update:
-            st.info("Pendaftaran dibatalkan. Data lama tidak diubah.")
-            st.session_state.duplikat_data = None
-
-# =========================================================
-# FOOTER
-# =========================================================
-st.markdown("""
-<div class="footer-note">
-    <hr style="border: none; border-top: 1px solid #dfe6ee; margin-bottom: 12px;">
-    Made with ❤️ untuk warga kampung
-</div>
-""", unsafe_allow_html=True)
+if not supabase:
+    st.error("❌ Tidak dapat terhubung ke Supabase. Periksa URL dan Key Anda di Secrets.")
+    st.info("""
+    📌 **Cara Setup Secrets di Streamlit Cloud:**
+    1. Buka dashboard Streamlit Cloud
+    2. Pilih app Anda
+    3. Klik menu "Settings" → "Secrets"
+    4. Tambahkan:
+""")
+st.stop()
