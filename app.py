@@ -43,7 +43,12 @@ BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
 def format_tanggal_indonesia(dt):
+    """Format tanggal untuk ditampilkan di form"""
     return f"{dt.day:02d} {BULAN_ID[dt.month - 1]} {dt.year} {dt.strftime('%H:%M:%S')}"
+
+def format_tanggal_iso(dt):
+    """Format tanggal ISO 8601 untuk Supabase"""
+    return dt.isoformat()
 
 def normalisasi_teks(s):
     return " ".join((s or "").strip().lower().split())
@@ -67,7 +72,7 @@ def cek_data_existing(nama_lengkap, no_wa):
     if not supabase:
         return None
     try:
-        response = supabase.table('form_kursus_mec')\
+        response = supabase.table('pendaftaran')\
             .select('*')\
             .eq('no_wa', str(no_wa))\
             .execute()
@@ -85,8 +90,10 @@ def simpan_data_baru(data_pendaftar):
     if not supabase:
         return None, "Supabase tidak terkoneksi"
     try:
+        # Tambahkan created_at dengan format ISO
         data_pendaftar['created_at'] = datetime.now().isoformat()
-        response = supabase.table('form_kursus_mec')\
+        
+        response = supabase.table('pendaftaran')\
             .insert(data_pendaftar)\
             .execute()
         if response.data:
@@ -100,7 +107,7 @@ def update_data_lama(nama_lengkap, no_wa, data_pendaftar):
     if not supabase:
         return None, "Supabase tidak terkoneksi"
     try:
-        response = supabase.table('form_kursus_mec')\
+        response = supabase.table('pendaftaran')\
             .update(data_pendaftar)\
             .eq('no_wa', str(no_wa))\
             .eq('nama_lengkap', nama_lengkap)\
@@ -394,7 +401,7 @@ except Exception as e:
     st.error(f"Error di header: {e}")
 
 # =========================================================
-# CEK KONEKSI SUPABASE (TAPI TIDAK MENGHENTIKAN APLIKASI)
+# CEK KONEKSI SUPABASE
 # =========================================================
 if not supabase:
     st.warning(f"⚠️ Koneksi ke Supabase: {error_msg if error_msg else 'Gagal terhubung'}")
@@ -671,8 +678,11 @@ try:
             else:
                 pekerjaan_final = pekerjaan_ortu_lainnya.strip() if pekerjaan_ortu == "Lainnya" else pekerjaan_ortu
 
+            # Gunakan format ISO untuk tanggal (bukan format Indonesia)
+            now = datetime.now()
+            
             data_pendaftar = {
-                "tanggal_daftar": format_tanggal_indonesia(datetime.now()),
+                "tanggal_daftar": format_tanggal_iso(now),  # Format ISO untuk Supabase
                 "metode": metode,
                 "nama_lengkap": nama,
                 "nama_panggilan": nama_panggilan if nama_panggilan else "-",
@@ -698,7 +708,10 @@ try:
                 if data_lama is None:
                     response, error = simpan_data_baru(data_pendaftar)
                     if error is None:
+                        # Tampilkan tanggal dalam format Indonesia di pesan sukses
+                        tanggal_indonesia = format_tanggal_indonesia(now)
                         st.success(f"✅ Pendaftaran **{nama}** berhasil! Data sudah tersimpan.")
+                        st.info(f"📅 Tanggal pendaftaran: {tanggal_indonesia}")
                         st.balloons()
                     else:
                         st.error(f"❌ Gagal simpan data: {error}")
